@@ -5,11 +5,12 @@ This project collects historical data from various Spectra Protocol contracts on
 ## Features
 
 - Historical data collection from Ethereum contracts
+- Interactive web dashboard for contract management and data collection
 - Automated syncing to Dune Analytics
-- Interactive dashboard for data visualization
-- Configurable data collection parameters
 - Support for multiple RPC endpoints
+- Configurable data collection parameters
 - Scheduled data updates
+- Contract management interface
 
 ## Setup
 
@@ -36,28 +37,77 @@ Edit `.env` with your configuration:
 
 ## Usage
 
-### Data Collection
-Collect historical data from contracts:
-```bash
-poetry run loop-collect
-```
-
-### Data Upload
-Upload collected data to Dune Analytics:
-```bash
-poetry run loop-upload
-```
-
-### Dashboard
+### Web Dashboard
 Launch the interactive dashboard:
 ```bash
-poetry run loop-dashboard
+poetry run streamlit run loop_dune/dashboard.py
 ```
 
-### Sync Service
-Run the automated sync service:
+The dashboard provides three main sections:
+
+1. **Contract Management**
+   - View and select existing contracts
+   - Add new contracts with custom configurations
+   - Configure functions to track for each contract
+   - Manage contract ABIs and parameters
+
+2. **Data Collection**
+   - Select contracts for data collection
+   - Configure block ranges and collection parameters
+   - Fetch and preview data
+   - Save data to CSV files
+
+3. **Dune Integration**
+   - Upload collected data to Dune Analytics
+   - Create new tables or insert into existing ones
+   - Preview data before upload
+
+### Command Line Tools
+
+You can also use the command line tools directly:
+
 ```bash
+# Collect historical data
+poetry run loop-collect
+
+# Upload data to Dune
+poetry run loop-upload
+
+# Run automated sync service
 poetry run loop-sync
+```
+
+## Data Format
+
+Each contract's data is stored in a separate CSV file named `{contract_name}.csv` in the `data` directory. The CSV includes:
+- `block_number`: The Ethereum block number
+- `timestamp`: The block's timestamp
+- Additional columns based on the tracked functions for each contract
+
+## Configuration
+
+Contract configurations are defined in `config/contracts.py`. Each contract entry includes:
+- Contract address
+- ABI file
+- Start block
+- Functions to track with their parameters and column names
+
+## Development
+
+### Running Tests
+```bash
+poetry run pytest
+```
+
+### Code Formatting
+```bash
+poetry run black .
+poetry run isort .
+```
+
+### Type Checking
+```bash
+poetry run mypy .
 ```
 
 ## Deployment to Heroku
@@ -100,39 +150,6 @@ heroku ps:scale worker=1
 7. Monitor logs:
 ```bash
 heroku logs --tail
-```
-
-## Data Format
-
-Each contract's data is stored in a separate CSV file named `{contract_name}.csv` in the `data` directory. The CSV includes:
-- `block_number`: The Ethereum block number
-- `timestamp`: The block's timestamp
-- Additional columns based on the tracked functions for each contract
-
-## Configuration
-
-Contract configurations are defined in `config/contracts.py`. Each contract entry includes:
-- Contract address
-- ABI file
-- Start block
-- Functions to track with their parameters and column names
-
-## Development
-
-### Running Tests
-```bash
-poetry run pytest
-```
-
-### Code Formatting
-```bash
-poetry run black .
-poetry run isort .
-```
-
-### Type Checking
-```bash
-poetry run mypy .
 ```
 
 ## License
