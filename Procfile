@@ -1,0 +1,1 @@
+worker: poetry run loop-sync
