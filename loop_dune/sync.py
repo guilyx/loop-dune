@@ -302,7 +302,6 @@ def main():
 
         if args.daily:
             # Run daily sync
-            sync.sync_historical_data()
             sync.schedule_daily_sync()
 
         else:
