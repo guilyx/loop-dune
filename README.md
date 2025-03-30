@@ -11,6 +11,8 @@ This project collects historical data from various Spectra Protocol contracts on
 - Configurable data collection parameters
 - Scheduled data updates
 - Contract management interface
+- Docker support for sync service
+- Automated testing and container builds
 
 ## Setup
 
@@ -76,6 +78,51 @@ poetry run loop-upload
 # Run automated sync service
 poetry run loop-sync
 ```
+
+### Docker Deployment
+
+The sync service can be deployed using Docker:
+
+```bash
+# Build and run using docker-compose
+docker-compose up -d
+
+# Or build and run using Docker directly
+docker build -t loop-dune-sync .
+docker run -d \
+  --name loop-dune-sync \
+  -e DUNE_API_KEY=your_key \
+  -e ETH_RPC_URLS=your_urls \
+  -v $(pwd)/data:/app/data \
+  loop-dune-sync
+```
+
+## Testing
+
+Run the test suite:
+```bash
+poetry run pytest
+```
+
+The test suite includes:
+- Unit tests for sync functionality
+- Mocked Web3 and API calls
+- Data validation tests
+- Error handling tests
+
+## CI/CD
+
+The project uses GitHub Actions for:
+- Automated testing on push and pull requests
+- Docker image building and pushing to GitHub Container Registry
+- Version tagging and release management
+
+### GitHub Container Registry
+
+Docker images are automatically built and pushed to GitHub Container Registry:
+- Latest image: `ghcr.io/your-username/loop-dune:latest`
+- Versioned images: `ghcr.io/your-username/loop-dune:v1.0.0`
+- Branch images: `ghcr.io/your-username/loop-dune:main`
 
 ## Data Format
 

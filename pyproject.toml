@@ -2,7 +2,7 @@
 name = "loop-dune"
 version = "0.1.0"
 description = "Collect and analyze Loop data"
-authors = ["Your Name <your.email@example.com>"]
+authors = ["Rangonomics <rangonomics@gmail.com>"]
 packages = [
     { include = "loop_dune" }
 ]
@@ -10,7 +10,6 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.9,!=3.9.7"
-web3 = "^6.15.1"
 python-dotenv = "^1.0.1"
 pandas = "^2.2.1"
 eth-typing = "^4.0.0"
@@ -20,12 +19,15 @@ requests = "^2.31.0"
 streamlit = "^1.32.0"
 plotly = "^5.19.0"
 schedule = "^1.2.1"
+web3 = "6.10.0"
+setuptools = "^78.1.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.0.2"
 black = "^24.2.0"
 isort = "^5.13.2"
 mypy = "^1.8.0"
+PyYAML = "^6.0.1"
 
 [build-system]
 requires = ["poetry-core"]

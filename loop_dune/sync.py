@@ -136,6 +136,13 @@ class DuneSync:
         Returns:
             bool: True if data was inserted successfully
         """
+        # Validate DataFrame is not empty
+        if df.empty:
+            print(
+                f"{Fore.YELLOW}No data to insert for {contract_name}{Style.RESET_ALL}"
+            )
+            return False
+
         table_name = f"{contract_name}_{self.asset.lower()}"
 
         try:
