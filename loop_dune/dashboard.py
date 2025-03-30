@@ -1,245 +1,289 @@
 import os
-import pandas as pd
+import json
 import streamlit as st
-import plotly.express as px
-import plotly.graph_objects as go
-from datetime import datetime
-from decimal import Decimal
+import pandas as pd
+from pathlib import Path
+from typing import Dict, Any, Optional
+from web3 import Web3
+from dotenv import load_dotenv
 
-# Constants for formatting
-WAD = Decimal("1e18")  # 18 decimals for WAD format
-RAY = Decimal("1e27")  # 27 decimals for RAY format
-USD_DECIMALS = Decimal("1e8")  # 8 decimals for USD price
+from loop_dune.collector import BlockchainDataCollector
+from loop_dune.sync import DuneSync
+from loop_dune.config.contracts import CONTRACTS, load_abi
 
+# Load environment variables
+load_dotenv()
 
-def format_wei(value: str) -> float:
-    """Convert from Wei to ETH."""
-    return float(Decimal(str(value)) / WAD)
-
-
-def format_ray(value: str) -> float:
-    """Convert from Ray to percentage."""
-    return float(Decimal(str(value)) / RAY)
-
-
-def format_usd(value: str) -> float:
-    """Convert from USD decimals to USD."""
-    return float(Decimal(str(value)) / USD_DECIMALS)
+# Initialize Web3
+rpc_urls = os.getenv("ETH_RPC_URLS", "").split(",")
+if not rpc_urls or not rpc_urls[0]:
+    raise ValueError("ETH_RPC_URLS environment variable not set")
+w3 = Web3(Web3.HTTPProvider(rpc_urls[0].strip()))
 
 
-def load_data(data_dir: str = "data") -> dict:
-    """Load all CSV files from the data directory."""
-    data = {}
-    for file in os.listdir(data_dir):
-        if file.endswith(".csv"):
-            contract_name = file.replace(".csv", "")
-            df = pd.read_csv(os.path.join(data_dir, file))
-            df["timestamp"] = pd.to_datetime(df["timestamp"])
-            data[contract_name] = df
-    return data
+def save_contract_config(contract_data: Dict[str, Any]) -> None:
+    """Save contract configuration to config/contracts.json"""
+    config_path = Path("config/contracts.json")
+    config_path.parent.mkdir(exist_ok=True)
 
-
-def plot_total_debt(data: dict, asset: str):
-    """Plot total debt over time."""
-    if asset == "ETH":
-        df = data["spectra_cdp"]
-        value_col = "total_debt"
-        title = "Total Debt (ETH)"
-        y_label = "ETH"
-        formatter = format_wei
+    if config_path.exists():
+        with open(config_path, "r") as f:
+            config = json.load(f)
     else:
-        df = data["deusd_cdp"]
-        value_col = "total_debt"
-        title = "Total Debt (USD)"
-        y_label = "USD"
-        formatter = format_usd
+        config = {"ETH": {}, "USD": {}}
 
-    df["formatted_value"] = df[value_col].apply(formatter)
+    asset = contract_data["asset"]
+    name = contract_data["name"]
 
-    fig = px.line(
-        df,
-        x="timestamp",
-        y="formatted_value",
-        title=title,
-        labels={"formatted_value": y_label, "timestamp": "Time"},
+    config[asset][name] = {
+        "address": contract_data["address"],
+        "abi": contract_data["abi"],
+        "functions": contract_data["functions"],
+    }
+
+    with open(config_path, "w") as f:
+        json.dump(config, f, indent=2)
+
+
+def load_existing_config() -> Dict[str, Dict[str, Any]]:
+    """Load existing contract configuration or create from CONTRACTS"""
+    config_path = Path("config/contracts.json")
+
+    if config_path.exists():
+        with open(config_path, "r") as f:
+            return json.load(f)
+
+    # If no config exists, create from CONTRACTS
+    config = {"ETH": {}, "USD": {}}
+
+    for asset in ["ETH", "USD"]:
+        for contract_name, contract_data in CONTRACTS[asset].items():
+            # Load ABI from file
+            abi = load_abi(contract_name, asset)
+
+            # Convert functions_to_track to the format used in the dashboard
+            functions = [
+                {
+                    "name": func["name"],
+                    "params": func["params"],
+                    "column": func["column_names"][0],  # Using first column name
+                }
+                for func in contract_data["functions_to_track"]
+            ]
+
+            config[asset][contract_name] = {
+                "address": contract_data["address"],
+                "abi": abi,
+                "functions": functions,
+            }
+
+    # Save the initial config
+    with open(config_path, "w") as f:
+        json.dump(config, f, indent=2)
+
+    return config
+
+
+def fetch_contract_data(
+    contract_data: Dict[str, Any],
+    start_block: int,
+    end_block: Optional[int] = None,
+    step: int = 1,
+    rate: float = 0.1,
+) -> pd.DataFrame:
+    """Fetch data for a contract"""
+    collector = BlockchainDataCollector(asset=contract_data["asset"])
+
+    # Create contract object
+    contract = w3.eth.contract(
+        address=Web3.to_checksum_address(contract_data["address"]),
+        abi=contract_data["abi"],
     )
 
-    st.plotly_chart(fig, use_container_width=True)
+    if end_block is None:
+        end_block = start_block
 
-
-def plot_interest_rates(data: dict, asset: str):
-    """Plot interest rates over time."""
-    if asset == "ETH":
-        df = data["lp_eth_pool"]
-        title = "Interest Rates (ETH)"
-    else:
-        df = data["lp_usd_pool"]
-        title = "Interest Rates (USD)"
-
-    df["base_rate"] = df["base_interest_rate"].apply(format_ray)
-    df["supply_rate"] = df["supply_rate"].apply(format_ray)
-
-    fig = go.Figure()
-    fig.add_trace(
-        go.Scatter(
-            x=df["timestamp"],
-            y=df["base_rate"],
-            name="Base Rate",
-            line=dict(color="blue"),
-        )
+    return collector.collect_contract_data(
+        contract_data["name"], contract, start_block, end_block, step, rate
     )
-    fig.add_trace(
-        go.Scatter(
-            x=df["timestamp"],
-            y=df["supply_rate"],
-            name="Supply Rate",
-            line=dict(color="red"),
-        )
-    )
-
-    fig.update_layout(
-        title=title, xaxis_title="Time", yaxis_title="Rate (%)", hovermode="x unified"
-    )
-
-    st.plotly_chart(fig, use_container_width=True)
-
-
-def plot_liquidity(data: dict, asset: str):
-    """Plot available and expected liquidity over time."""
-    if asset == "ETH":
-        df = data["lp_eth_pool"]
-        title = "Liquidity (ETH)"
-        y_label = "ETH"
-        formatter = format_wei
-    else:
-        df = data["lp_usd_pool"]
-        title = "Liquidity (USD)"
-        y_label = "USD"
-        formatter = format_usd
-
-    df["available"] = df["available_liquidity"].apply(formatter)
-    df["expected"] = df["expected_liquidity"].apply(formatter)
-
-    fig = go.Figure()
-    fig.add_trace(
-        go.Scatter(
-            x=df["timestamp"],
-            y=df["available"],
-            name="Available Liquidity",
-            line=dict(color="green"),
-        )
-    )
-    fig.add_trace(
-        go.Scatter(
-            x=df["timestamp"],
-            y=df["expected"],
-            name="Expected Liquidity",
-            line=dict(color="blue"),
-        )
-    )
-
-    fig.update_layout(
-        title=title, xaxis_title="Time", yaxis_title=y_label, hovermode="x unified"
-    )
-
-    st.plotly_chart(fig, use_container_width=True)
-
-
-def plot_tvl(data: dict, asset: str):
-    """Plot TVL over time."""
-    if asset == "ETH":
-        df = data["slp_eth"]
-        title = "TVL (ETH)"
-        y_label = "ETH"
-        formatter = format_wei
-    else:
-        df = data["slp_usd"]
-        title = "TVL (USD)"
-        y_label = "USD"
-        formatter = format_usd
-
-    df["tvl"] = df["total_supply"].apply(formatter)
-
-    fig = px.line(
-        df,
-        x="timestamp",
-        y="tvl",
-        title=title,
-        labels={"tvl": y_label, "timestamp": "Time"},
-    )
-
-    st.plotly_chart(fig, use_container_width=True)
 
 
 def main():
-    st.set_page_config(page_title="Loop Protocol Dashboard", layout="wide")
+    st.set_page_config(page_title="Loop Dune Dashboard", layout="wide")
+    st.title("Loop Dune Dashboard")
 
-    st.title("Loop Protocol Dashboard")
+    # Load existing configuration
+    config = load_existing_config()
 
-    # Asset selector
-    asset = st.sidebar.selectbox("Select Asset", ["ETH", "USD"])
+    # Sidebar for navigation
+    page = st.sidebar.radio(
+        "Navigation", ["Contract Management", "Data Collection", "Dune Integration"]
+    )
 
-    # Load data
-    data = load_data()
+    if page == "Contract Management":
+        st.header("Contract Management")
 
-    # Display metrics
-    st.header("Key Metrics")
+        # Display existing contracts
+        st.subheader("Existing Contracts")
 
-    if asset == "ETH":
-        cdp_data = data["spectra_cdp"]
-        pool_data = data["lp_eth_pool"]
-        slp_data = data["slp_eth"]
-    else:
-        cdp_data = data["deusd_cdp"]
-        pool_data = data["lp_usd_pool"]
-        slp_data = data["slp_usd"]
+        for asset in ["ETH", "USD"]:
+            if asset in config and config[asset]:
+                st.write(f"### {asset} Contracts")
+                for contract_name, contract_data in config[asset].items():
+                    col1, col2 = st.columns([3, 1])
+                    with col1:
+                        st.write(f"**{contract_name}**")
+                        st.write(f"Address: `{contract_data['address']}`")
+                        st.write(f"Functions: {len(contract_data['functions'])}")
+                    with col2:
+                        if st.checkbox("Select", key=f"select_{asset}_{contract_name}"):
+                            st.write("Selected for data collection")
 
-    # Latest values
-    col1, col2, col3 = st.columns(3)
+        # Add new contract form
+        st.subheader("Add New Contract")
+        with st.form("contract_form"):
+            col1, col2 = st.columns(2)
+            with col1:
+                name = st.text_input("Contract Name")
+                address = st.text_input("Contract Address")
+                asset = st.selectbox("Asset Type", ["ETH", "USD"])
 
-    with col1:
-        latest_debt = (
-            format_wei(cdp_data["total_debt"].iloc[-1])
-            if asset == "ETH"
-            else format_usd(cdp_data["total_debt"].iloc[-1])
-        )
-        st.metric("Total Debt", f"{latest_debt:,.2f} {asset}")
+            with col2:
+                abi = st.text_area("Contract ABI (JSON)")
+                try:
+                    abi = json.loads(abi) if abi else []
+                except json.JSONDecodeError:
+                    st.error("Invalid ABI JSON")
+                    abi = []
 
-    with col2:
-        latest_liquidity = (
-            format_wei(pool_data["available_liquidity"].iloc[-1])
-            if asset == "ETH"
-            else format_usd(pool_data["available_liquidity"].iloc[-1])
-        )
-        st.metric("Available Liquidity", f"{latest_liquidity:,.2f} {asset}")
+            # Function configuration
+            st.subheader("Functions to Track")
+            functions = []
 
-    with col3:
-        latest_tvl = (
-            format_wei(slp_data["total_supply"].iloc[-1])
-            if asset == "ETH"
-            else format_usd(slp_data["total_supply"].iloc[-1])
-        )
-        st.metric("TVL", f"{latest_tvl:,.2f} {asset}")
+            num_functions = st.number_input("Number of Functions", min_value=1, value=1)
 
-    # Plots
-    st.header("Charts")
+            for i in range(num_functions):
+                with st.expander(f"Function {i+1}"):
+                    func_name = st.text_input(f"Function Name {i+1}")
+                    func_params = st.text_input(f"Parameters (comma-separated) {i+1}")
+                    column_name = st.text_input(f"Column Name {i+1}")
 
-    # Total Debt
-    plot_total_debt(data, asset)
+                    if func_name and column_name:
+                        functions.append(
+                            {
+                                "name": func_name,
+                                "params": (
+                                    [p.strip() for p in func_params.split(",")]
+                                    if func_params
+                                    else []
+                                ),
+                                "column": column_name,
+                            }
+                        )
 
-    # Interest Rates
-    plot_interest_rates(data, asset)
+            if st.form_submit_button("Add Contract"):
+                if name and address and abi and functions:
+                    contract_data = {
+                        "name": name,
+                        "address": address,
+                        "asset": asset,
+                        "abi": abi,
+                        "functions": functions,
+                    }
+                    save_contract_config(contract_data)
+                    st.success(f"Contract {name} added successfully!")
+                    st.experimental_rerun()  # Refresh to show new contract
+                else:
+                    st.error("Please fill in all required fields")
 
-    # Liquidity
-    plot_liquidity(data, asset)
+    elif page == "Data Collection":
+        st.header("Data Collection")
 
-    # TVL
-    plot_tvl(data, asset)
+        # Contract selection
+        asset = st.selectbox("Select Asset", ["ETH", "USD"])
+        if asset in config and config[asset]:
+            contract_name = st.selectbox("Select Contract", list(config[asset].keys()))
+            contract_data = config[asset][contract_name]
 
-    # Raw data table
-    st.header("Raw Data")
-    contract = st.selectbox("Select Contract", list(data.keys()))
-    st.dataframe(data[contract])
+            # Data collection parameters
+            col1, col2 = st.columns(2)
+            with col1:
+                start_block = st.number_input("Start Block", min_value=0)
+                end_block = st.number_input(
+                    "End Block (optional)", min_value=0, value=start_block
+                )
+                step = st.number_input("Block Step", min_value=1, value=1)
+
+            with col2:
+                rate = st.number_input(
+                    "Fetch Rate (seconds)", min_value=0.1, value=0.1, step=0.1
+                )
+
+            if st.button("Fetch Data"):
+                with st.spinner("Fetching data..."):
+                    df = fetch_contract_data(
+                        {"name": contract_name, **contract_data},
+                        start_block,
+                        end_block,
+                        step,
+                        rate,
+                    )
+
+                    if not df.empty:
+                        st.success(f"Successfully fetched {len(df)} data points")
+                        st.dataframe(df)
+
+                        # Save to CSV
+                        data_dir = Path("data")
+                        data_dir.mkdir(exist_ok=True)
+                        csv_path = data_dir / f"{contract_name}.csv"
+                        df.to_csv(csv_path, index=False)
+                        st.success(f"Data saved to {csv_path}")
+                    else:
+                        st.warning("No data was fetched")
+
+    else:  # Dune Integration
+        st.header("Dune Integration")
+
+        # Contract selection
+        asset = st.selectbox("Select Asset", ["ETH", "USD"])
+        if asset in config and config[asset]:
+            contract_name = st.selectbox("Select Contract", list(config[asset].keys()))
+            contract_data = config[asset][contract_name]
+
+            # Load CSV data
+            csv_path = Path("data") / f"{contract_name}.csv"
+            if csv_path.exists():
+                df = pd.read_csv(csv_path)
+                st.success(f"Loaded {len(df)} data points from CSV")
+
+                # Display data preview
+                st.subheader("Data Preview")
+                st.dataframe(df.head())
+
+                # Dune integration options
+                st.subheader("Dune Integration")
+
+                col1, col2 = st.columns(2)
+                with col1:
+                    if st.button("Create Table"):
+                        dune_sync = DuneSync(asset=asset)
+                        if dune_sync.create_table(contract_name, df):
+                            st.success("Table created successfully!")
+                        else:
+                            st.error("Failed to create table")
+
+                with col2:
+                    if st.button("Insert Data"):
+                        dune_sync = DuneSync(asset=asset)
+                        if dune_sync.insert_data(contract_name, df):
+                            st.success("Data inserted successfully!")
+                        else:
+                            st.error("Failed to insert data")
+            else:
+                st.error(
+                    f"No CSV file found for {contract_name}. Please collect data first."
+                )
 
 
 if __name__ == "__main__":
