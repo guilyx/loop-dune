@@ -75,7 +75,7 @@ class DuneSync:
             df: DataFrame containing the data
 
         Returns:
-            bool: True if table was created successfully
+            bool: True if table was created successfully, False if table already exists or error
         """
         # Prepare schema from DataFrame
         schema = []
@@ -114,7 +114,7 @@ class DuneSync:
                     print(
                         f"{Fore.YELLOW}Table {data['table_name']} already exists{Style.RESET_ALL}"
                     )
-                    return True
+                    return False
             else:
                 print(
                     f"{Fore.RED}Error creating table: {response.text}{Style.RESET_ALL}"

@@ -100,18 +100,44 @@ def test_sync_historical_data():
     """Test historical data sync"""
     with patch("web3.Web3.HTTPProvider") as mock_provider:
         with patch("web3.Web3.is_connected", return_value=True):
-            with patch("web3.Web3.eth.get_block_number", return_value=1000):
-                with patch("requests.post") as mock_requests:
-                    mock_requests.return_value.status_code = 200
-                    mock_requests.return_value.json.return_value = {"success": True}
+            with patch("requests.post") as mock_requests:
+                # First call (create_table) should return False to trigger insert_data
+                mock_requests.return_value.status_code = 200
+                mock_requests.return_value.json.side_effect = [
+                    {"success": False},  # First call (create_table)
+                    {"rows_written": 5},  # Second call (insert_data)
+                ]
 
-                    sync = DuneSync(asset="ETH")
-                    with patch.object(sync, "get_web3") as mock_get_web3:
-                        mock_web3 = MagicMock()
-                        mock_web3.eth.block_number = 1000
-                        mock_get_web3.return_value = mock_web3
+                sync = DuneSync(asset="ETH")
+                with patch.object(sync, "get_web3") as mock_get_web3:
+                    mock_web3 = MagicMock()
+                    mock_web3.eth.block_number = 1000
+                    mock_get_web3.return_value = mock_web3
+
+                    # Mock the BlockchainDataCollector
+                    with patch(
+                        "loop_dune.sync.BlockchainDataCollector"
+                    ) as mock_collector:
+                        mock_collector_instance = MagicMock()
+                        mock_collector_instance.get_contract_creation_block.return_value = (
+                            100
+                        )
+                        mock_collector_instance.get_next_w3.return_value = mock_web3
+
+                        # Create a larger DataFrame to ensure multiple API calls
+                        df = pd.DataFrame(
+                            {
+                                "block_number": [1000, 1001, 1002, 1003, 1004],
+                                "timestamp": [datetime.now()] * 5,
+                                "value": [100, 101, 102, 103, 104],
+                            }
+                        )
+                        mock_collector_instance.collect_contract_data.return_value = df
+                        mock_collector.return_value = mock_collector_instance
+
                         sync.sync_historical_data()
-                        assert mock_requests.call_count >= 2
+                        # We expect 2 calls: one for create_table and one for insert_data
+                        assert mock_requests.call_count == 2
 
 
 @pytest.mark.integration
@@ -119,16 +145,33 @@ def test_sync_daily_data():
     """Test daily data sync"""
     with patch("web3.Web3.HTTPProvider") as mock_provider:
         with patch("web3.Web3.is_connected", return_value=True):
-            with patch("web3.Web3.eth.get_block_number", return_value=1000):
-                with patch("requests.post") as mock_requests:
-                    mock_requests.return_value.status_code = 200
-                    mock_requests.return_value.json.return_value = {"success": True}
+            with patch("requests.post") as mock_requests:
+                mock_requests.return_value.status_code = 200
+                mock_requests.return_value.json.return_value = {"success": True}
 
-                    sync = DuneSync(asset="ETH")
-                    with patch.object(sync, "get_web3") as mock_get_web3:
-                        mock_web3 = MagicMock()
-                        mock_web3.eth.block_number = 1000
-                        mock_get_web3.return_value = mock_web3
+                sync = DuneSync(asset="ETH")
+                with patch.object(sync, "get_web3") as mock_get_web3:
+                    mock_web3 = MagicMock()
+                    mock_web3.eth.block_number = 1000
+                    mock_get_web3.return_value = mock_web3
+
+                    # Mock the BlockchainDataCollector
+                    with patch(
+                        "loop_dune.sync.BlockchainDataCollector"
+                    ) as mock_collector:
+                        mock_collector_instance = MagicMock()
+                        mock_collector_instance.get_next_w3.return_value = mock_web3
+                        mock_collector_instance.collect_contract_data.return_value = (
+                            pd.DataFrame(
+                                {
+                                    "block_number": [1000],
+                                    "timestamp": [datetime.now()],
+                                    "value": [100],
+                                }
+                            )
+                        )
+                        mock_collector.return_value = mock_collector_instance
+
                         sync.sync_daily_data()
                         assert mock_requests.call_count >= 1
 
