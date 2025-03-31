@@ -7,7 +7,9 @@ packages = [
     { include = "loop_dune", from = "." }
 ]
 include = [
-    "loop_dune/config/abis/**/*.json"
+    "loop_dune/config/abis/eth/*.json",
+    "loop_dune/config/abis/usd/*.json",
+    "loop_dune/config/abis/bnb/*.json"
 ]
 readme = "README.md"
 
