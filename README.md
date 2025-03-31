@@ -1,7 +1,7 @@
 # Loop Dune - Blockchain Data Collection and Sync
 
 [![Tests](https://github.com/wardn/loop-dune/actions/workflows/test.yml/badge.svg)](https://github.com/wardn/loop-dune/actions/workflows/test.yml)
-[![codecov](https://codecov.io/gh/wardn/loop-dune/branch/master/graph/badge.svg)](https://codecov.io/gh/wardn/loop-dune)
+[![codecov](https://codecov.io/github/guilyx/loop-dune/graph/badge.svg?token=OQ8VG86ZTN)](https://codecov.io/github/guilyx/loop-dune)
 
 This project collects historical data from various Spectra Protocol contracts on the Ethereum blockchain and syncs it to Dune Analytics. It includes tools for data collection, analysis, and automated syncing to Dune Analytics.
 
