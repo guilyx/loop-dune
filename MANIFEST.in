@@ -1,0 +1,2 @@
+include loop_dune/config/abis/eth/*.json
+include loop_dune/config/abis/usd/*.json

@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 
 from loop_dune.collector import BlockchainDataCollector
 from loop_dune.sync import DuneSync
-from loop_dune.config.contracts import CONTRACTS, load_abi
+from loop_dune.config.contracts import CONTRACTS
 
 # Load environment variables
 load_dotenv()
@@ -21,78 +21,17 @@ if not rpc_urls or not rpc_urls[0]:
 w3 = Web3(Web3.HTTPProvider(rpc_urls[0].strip()))
 
 
-def save_contract_config(contract_data: Dict[str, Any]) -> None:
-    """Save contract configuration to config/contracts.json"""
-    config_path = Path("config/contracts.json")
-    config_path.parent.mkdir(exist_ok=True)
-
-    if config_path.exists():
-        with open(config_path, "r") as f:
-            config = json.load(f)
-    else:
-        config = {"ETH": {}, "USD": {}}
-
-    asset = contract_data["asset"]
-    name = contract_data["name"]
-
-    config[asset][name] = {
-        "address": contract_data["address"],
-        "abi": contract_data["abi"],
-        "functions": contract_data["functions"],
-    }
-
-    with open(config_path, "w") as f:
-        json.dump(config, f, indent=2)
-
-
-def load_existing_config() -> Dict[str, Dict[str, Any]]:
-    """Load existing contract configuration or create from CONTRACTS"""
-    config_path = Path("config/contracts.json")
-
-    if config_path.exists():
-        with open(config_path, "r") as f:
-            return json.load(f)
-
-    # If no config exists, create from CONTRACTS
-    config = {"ETH": {}, "USD": {}}
-
-    for asset in ["ETH", "USD"]:
-        for contract_name, contract_data in CONTRACTS[asset].items():
-            # Load ABI from file
-            abi = load_abi(contract_name, asset)
-
-            # Convert functions_to_track to the format used in the dashboard
-            functions = [
-                {
-                    "name": func["name"],
-                    "params": func["params"],
-                    "column": func["column_names"][0],  # Using first column name
-                }
-                for func in contract_data["functions_to_track"]
-            ]
-
-            config[asset][contract_name] = {
-                "address": contract_data["address"],
-                "abi": abi,
-                "functions": functions,
-            }
-
-    # Save the initial config
-    with open(config_path, "w") as f:
-        json.dump(config, f, indent=2)
-
-    return config
-
-
 def fetch_contract_data(
-    contract_data: Dict[str, Any],
+    contract_name: str,
+    asset: str,
     start_block: int,
     end_block: Optional[int] = None,
     step: int = 1,
     rate: float = 0.1,
 ) -> pd.DataFrame:
     """Fetch data for a contract"""
-    collector = BlockchainDataCollector(asset=contract_data["asset"])
+    collector = BlockchainDataCollector(asset=asset)
+    contract_data = CONTRACTS[asset][contract_name]
 
     # Create contract object
     contract = w3.eth.contract(
@@ -104,16 +43,13 @@ def fetch_contract_data(
         end_block = start_block
 
     return collector.collect_contract_data(
-        contract_data["name"], contract, start_block, end_block, step, rate
+        contract_name, contract, start_block, end_block, step, rate
     )
 
 
 def main():
     st.set_page_config(page_title="Loop Dune Dashboard", layout="wide")
     st.title("Loop Dune Dashboard")
-
-    # Load existing configuration
-    config = load_existing_config()
 
     # Sidebar for navigation
     page = st.sidebar.radio(
@@ -127,83 +63,38 @@ def main():
         st.subheader("Existing Contracts")
 
         for asset in ["ETH", "USD"]:
-            if asset in config and config[asset]:
+            if asset in CONTRACTS and CONTRACTS[asset]:
                 st.write(f"### {asset} Contracts")
-                for contract_name, contract_data in config[asset].items():
+                for contract_name, contract_data in CONTRACTS[asset].items():
                     col1, col2 = st.columns([3, 1])
                     with col1:
                         st.write(f"**{contract_name}**")
                         st.write(f"Address: `{contract_data['address']}`")
-                        st.write(f"Functions: {len(contract_data['functions'])}")
+                        st.write(
+                            f"Functions: {len(contract_data['functions_to_track'])}"
+                        )
                     with col2:
                         if st.checkbox("Select", key=f"select_{asset}_{contract_name}"):
                             st.write("Selected for data collection")
 
-        # Add new contract form
-        st.subheader("Add New Contract")
-        with st.form("contract_form"):
-            col1, col2 = st.columns(2)
-            with col1:
-                name = st.text_input("Contract Name")
-                address = st.text_input("Contract Address")
-                asset = st.selectbox("Asset Type", ["ETH", "USD"])
-
-            with col2:
-                abi = st.text_area("Contract ABI (JSON)")
-                try:
-                    abi = json.loads(abi) if abi else []
-                except json.JSONDecodeError:
-                    st.error("Invalid ABI JSON")
-                    abi = []
-
-            # Function configuration
-            st.subheader("Functions to Track")
-            functions = []
-
-            num_functions = st.number_input("Number of Functions", min_value=1, value=1)
-
-            for i in range(num_functions):
-                with st.expander(f"Function {i+1}"):
-                    func_name = st.text_input(f"Function Name {i+1}")
-                    func_params = st.text_input(f"Parameters (comma-separated) {i+1}")
-                    column_name = st.text_input(f"Column Name {i+1}")
-
-                    if func_name and column_name:
-                        functions.append(
-                            {
-                                "name": func_name,
-                                "params": (
-                                    [p.strip() for p in func_params.split(",")]
-                                    if func_params
-                                    else []
-                                ),
-                                "column": column_name,
-                            }
-                        )
-
-            if st.form_submit_button("Add Contract"):
-                if name and address and abi and functions:
-                    contract_data = {
-                        "name": name,
-                        "address": address,
-                        "asset": asset,
-                        "abi": abi,
-                        "functions": functions,
-                    }
-                    save_contract_config(contract_data)
-                    st.success(f"Contract {name} added successfully!")
-                    st.experimental_rerun()  # Refresh to show new contract
-                else:
-                    st.error("Please fill in all required fields")
+        # Note about contract configuration
+        st.info(
+            """
+        Contract configurations are managed in `loop_dune/config/contracts.py`.
+        To add or modify contracts, please update the CONTRACTS dictionary in that file.
+        """
+        )
 
     elif page == "Data Collection":
         st.header("Data Collection")
 
         # Contract selection
         asset = st.selectbox("Select Asset", ["ETH", "USD"])
-        if asset in config and config[asset]:
-            contract_name = st.selectbox("Select Contract", list(config[asset].keys()))
-            contract_data = config[asset][contract_name]
+        if asset in CONTRACTS and CONTRACTS[asset]:
+            contract_name = st.selectbox(
+                "Select Contract", list(CONTRACTS[asset].keys())
+            )
+            contract_data = CONTRACTS[asset][contract_name]
 
             # Data collection parameters
             col1, col2 = st.columns(2)
@@ -222,7 +113,8 @@ def main():
             if st.button("Fetch Data"):
                 with st.spinner("Fetching data..."):
                     df = fetch_contract_data(
-                        {"name": contract_name, **contract_data},
+                        contract_name,
+                        asset,
                         start_block,
                         end_block,
                         step,
@@ -247,43 +139,46 @@ def main():
 
         # Contract selection
         asset = st.selectbox("Select Asset", ["ETH", "USD"])
-        if asset in config and config[asset]:
-            contract_name = st.selectbox("Select Contract", list(config[asset].keys()))
-            contract_data = config[asset][contract_name]
+        if asset in CONTRACTS and CONTRACTS[asset]:
+            contract_name = st.selectbox(
+                "Select Contract", list(CONTRACTS[asset].keys())
+            )
+            contract_data = CONTRACTS[asset][contract_name]
 
-            # Load CSV data
-            csv_path = Path("data") / f"{contract_name}.csv"
-            if csv_path.exists():
-                df = pd.read_csv(csv_path)
-                st.success(f"Loaded {len(df)} data points from CSV")
+            # Display contract info
+            st.write(f"**Contract:** {contract_name}")
+            st.write(f"**Address:** `{contract_data['address']}`")
+            st.write(f"**Functions:** {len(contract_data['functions_to_track'])}")
 
-                # Display data preview
-                st.subheader("Data Preview")
-                st.dataframe(df.head())
+            # Data file selection
+            data_dir = Path("data")
+            if data_dir.exists():
+                csv_files = list(data_dir.glob("*.csv"))
+                if csv_files:
+                    selected_file = st.selectbox(
+                        "Select Data File",
+                        [f.name for f in csv_files],
+                        format_func=lambda x: x.replace(".csv", ""),
+                    )
 
-                # Dune integration options
-                st.subheader("Dune Integration")
+                    if selected_file:
+                        df = pd.read_csv(data_dir / selected_file)
+                        st.write("### Data Preview")
+                        st.dataframe(df)
 
-                col1, col2 = st.columns(2)
-                with col1:
-                    if st.button("Create Table"):
-                        dune_sync = DuneSync(asset=asset)
-                        if dune_sync.create_table(contract_name, df):
-                            st.success("Table created successfully!")
-                        else:
-                            st.error("Failed to create table")
-
-                with col2:
-                    if st.button("Insert Data"):
-                        dune_sync = DuneSync(asset=asset)
-                        if dune_sync.insert_data(contract_name, df):
-                            st.success("Data inserted successfully!")
-                        else:
-                            st.error("Failed to insert data")
+                        if st.button("Upload to Dune"):
+                            sync = DuneSync(asset=asset)
+                            if sync.create_table(contract_name, df):
+                                if sync.insert_data(contract_name, df):
+                                    st.success("Data uploaded successfully!")
+                                else:
+                                    st.error("Failed to insert data")
+                            else:
+                                st.error("Failed to create table")
+                else:
+                    st.warning("No data files found. Please collect data first.")
             else:
-                st.error(
-                    f"No CSV file found for {contract_name}. Please collect data first."
-                )
+                st.warning("Data directory not found. Please collect data first.")
 
 
 if __name__ == "__main__":

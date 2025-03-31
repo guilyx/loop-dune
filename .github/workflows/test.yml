@@ -41,10 +41,14 @@ jobs:
 
     - name: Install dependencies
       if: steps.cache.outputs.cache-hit != 'true'
-      run: poetry install
+      run: |
+        poetry install
+        poetry build
+        pip install dist/loop_dune-0.1.0-py3-none-any.whl
 
-    - name: Install pytest-cov
-      run: poetry add pytest-cov
+    - name: Install test dependencies
+      run: |
+        poetry add pytest pytest-cov
 
     - name: Run tests with coverage
       env:
@@ -53,10 +57,17 @@ jobs:
         BLOCK_PERIOD: 1000
         BLOCK_RETRIEVAL_PERIOD: 0.1
       run: |
-        poetry run pytest --cov=loop_dune --cov-report=xml --cov-report=term-missing
+        poetry run pytest \
+          --cov=loop_dune \
+          --cov-branch \
+          --cov-report=xml \
+          --cov-report=term-missing \
+          --cov-report=html
 
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v3
+    - name: Upload coverage reports to Codecov
+      uses: codecov/codecov-action@v5
       with:
+        token: ${{ secrets.CODECOV_TOKEN }}
         file: ./coverage.xml
         fail_ci_if_error: true
+        verbose: true

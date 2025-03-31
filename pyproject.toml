@@ -4,7 +4,10 @@ version = "0.1.0"
 description = "Collect and analyze Loop data"
 authors = ["Rangonomics <rangonomics@gmail.com>"]
 packages = [
-    { include = "loop_dune" }
+    { include = "loop_dune", from = "." }
+]
+include = [
+    "loop_dune/config/abis/**/*.json"
 ]
 readme = "README.md"
 
