@@ -62,6 +62,9 @@ class DuneSync:
         self.block_period = int(os.getenv("BLOCK_PERIOD", "1000"))
         self.block_retrieval_period = float(os.getenv("BLOCK_RETRIEVAL_PERIOD", "0.1"))
 
+        # Initialize the collector
+        self.collector = BlockchainDataCollector(asset=self.asset)
+
     def get_web3(self) -> Web3:
         """Get a Web3 instance with a random RPC URL."""
         return Web3(Web3.HTTPProvider(random.choice(self.rpc_urls)))
@@ -184,59 +187,83 @@ class DuneSync:
             return False
 
     def sync_historical_data(self) -> None:
-        """Sync historical data from contract creation to current block."""
-        collector = BlockchainDataCollector(asset=self.asset)
-        current_block = self.get_web3().eth.block_number
+        """Sync historical data for all contracts."""
+        print(f"\n{Fore.CYAN}Starting historical data sync{Style.RESET_ALL}")
+        print(f"{Fore.CYAN}{'=' * 50}{Style.RESET_ALL}")
 
-        print(
-            f"{Fore.CYAN}Syncing historical data until block {current_block}{Style.RESET_ALL}"
-        )
+        # Get current block from any Web3 instance
+        current_block = self.w3.eth.block_number
+        print(f"{Fore.YELLOW}Current block: {current_block}{Style.RESET_ALL}")
 
-        # Collect data for each contract
-        for contract_name in self.contracts:
+        # Get creation blocks for all contracts
+        creation_blocks = self.collector.check_contract_creation_blocks()
+
+        if not creation_blocks:
+            print(f"{Fore.RED}No valid contracts found. Exiting.{Style.RESET_ALL}")
+            return
+
+        # Process each contract
+        for contract_name, creation_block in creation_blocks.items():
             try:
-                # Get contract creation block
-                contract = self.contracts[contract_name]
-                contract_address = contract["address"]
-                creation_block = collector.get_contract_creation_block(contract_address)
+                print(
+                    f"\n{Fore.GREEN}Processing contract: {contract_name}{Style.RESET_ALL}"
+                )
+                print(f"{Fore.YELLOW}Creation block: {creation_block}{Style.RESET_ALL}")
 
-                if creation_block is None:
+                # Calculate the number of blocks to process in each chunk
+                start_block = creation_block
+                end_block = start_block
+
+                while start_block < current_block:
                     print(
-                        f"{Fore.RED}Could not find creation block for {contract_name}{Style.RESET_ALL}"
+                        f"\n{Fore.CYAN}Processing blocks {start_block} to {end_block}{Style.RESET_ALL}"
                     )
-                    continue
+
+                    # Collect data for this chunk
+                    df = self.collector.collect_contract_data(
+                        contract_name=contract_name,
+                        contract=self.collector.get_contract(contract_name),
+                        creation_block=start_block,
+                        end_block=end_block,
+                    )
+
+                    if not df.empty:
+                        # Insert this chunk of data
+                        if not self.create_table(contract_name, df):
+                            print(
+                                f"{Fore.RED}Failed to create table, maybe it already exist. Let's insert {contract_name}{Style.RESET_ALL}"
+                            )
+
+                        success = self.insert_data(contract_name, df)
+                        if not success:
+                            print(
+                                f"{Fore.RED}Failed to insert data for {contract_name}{Style.RESET_ALL}"
+                            )
+                            break
+                    else:
+                        print(
+                            f"{Fore.YELLOW}No data to insert for {contract_name}{Style.RESET_ALL}"
+                        )
+
+                    # Update blocks for next chunk
+                    start_block = end_block + self.block_period
+                    end_block = start_block
 
                 print(
-                    f"{Fore.CYAN}Syncing {contract_name} from block {creation_block} to {current_block}{Style.RESET_ALL}"
+                    f"{Fore.GREEN}Completed processing {contract_name}{Style.RESET_ALL}"
                 )
-
-                # Create contract object
-                w3 = collector.get_next_w3()
-                contract_obj = w3.eth.contract(
-                    address=Web3.to_checksum_address(contract_address),
-                    abi=contract["abi"],
-                )
-
-                # Collect data
-                df = collector.collect_contract_data(
-                    contract_name, contract_obj, creation_block
-                )
-
-                # Create table if it doesn't exist
-                if not self.create_table(contract_name, df):
-                    # Insert data
-                    self.insert_data(contract_name, df)
 
             except Exception as e:
                 print(
-                    f"{Fore.RED}Error syncing {contract_name}: {str(e)}{Style.RESET_ALL}"
+                    f"{Fore.RED}Error processing {contract_name}: {e}{Style.RESET_ALL}"
                 )
                 continue
 
+        print(f"\n{Fore.GREEN}Historical data sync completed!{Style.RESET_ALL}")
+
     def sync_daily_data(self) -> None:
         """Sync data for the current block."""
-        collector = BlockchainDataCollector(asset=self.asset)
-        current_block = self.get_web3().eth.block_number
+        current_block = self.w3.eth.block_number
 
         print(
             f"{Fore.CYAN}Syncing daily data at block {current_block}{Style.RESET_ALL}"
@@ -245,19 +272,11 @@ class DuneSync:
         # Collect data for each contract
         for contract_name in self.contracts:
             try:
-                # Get contract config
-                contract = self.contracts[contract_name]
-                contract_address = contract["address"]
-
-                # Create contract object
-                w3 = collector.get_next_w3()
-                contract_obj = w3.eth.contract(
-                    address=Web3.to_checksum_address(contract_address),
-                    abi=contract["abi"],
-                )
+                # Get contract object
+                contract_obj = self.collector.get_contract(contract_name)
 
                 # Collect data
-                df = collector.collect_contract_data(
+                df = self.collector.collect_contract_data(
                     contract_name, contract_obj, current_block
                 )
 

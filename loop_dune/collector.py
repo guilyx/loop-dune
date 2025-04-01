@@ -164,10 +164,41 @@ class BlockchainDataCollector:
 
         return creation_blocks
 
+    def get_contract(self, contract_name: str) -> Contract:
+        """
+        Get a Web3 contract instance for the specified contract.
+
+        Args:
+            contract_name: Name of the contract in CONTRACTS dict
+
+        Returns:
+            Web3 contract instance
+        """
+        contract_config = self.contracts[contract_name]
+        w3 = self.get_next_w3()
+        return w3.eth.contract(
+            address=Web3.to_checksum_address(contract_config["address"]),
+            abi=contract_config["abi"],
+        )
+
     def collect_contract_data(
-        self, contract_name: str, contract: Contract, creation_block: int
+        self,
+        contract_name: str,
+        contract: Contract,
+        creation_block: int,
+        end_block: Optional[int] = None,
     ) -> pd.DataFrame:
-        """Collect data for a specific contract."""
+        """Collect data for a specific contract.
+
+        Args:
+            contract_name: Name of the contract
+            contract: Web3 contract instance
+            creation_block: Block number where the contract was created
+            end_block: Optional end block number. If None, uses current block.
+
+        Returns:
+            DataFrame containing the collected data
+        """
         contract_config = self.contracts[contract_name]
         contract_address = contract_config["address"]
 
@@ -177,15 +208,16 @@ class BlockchainDataCollector:
         print(f"{Fore.YELLOW}Address: {contract_address}{Style.RESET_ALL}")
         print(f"{Fore.YELLOW}Start block: {creation_block}{Style.RESET_ALL}")
 
-        # Get current block from any Web3 instance
-        current_block = self.w3_instances[0].eth.block_number
-        print(f"{Fore.YELLOW}Current block: {current_block}{Style.RESET_ALL}")
+        # Get current block from any Web3 instance if end_block not specified
+        if end_block is None:
+            end_block = self.w3_instances[0].eth.block_number
+        print(f"{Fore.YELLOW}End block: {end_block}{Style.RESET_ALL}")
         print(
             f"{Fore.YELLOW}Functions to track: {[f['name'] for f in contract_config['functions_to_track']]}{Style.RESET_ALL}"
         )
 
         # Calculate actual blocks we'll process
-        total_blocks = current_block - creation_block
+        total_blocks = end_block - creation_block
         blocks_to_process = (total_blocks // self.blocks_period) * self.blocks_period
         data_points = (blocks_to_process // self.blocks_period) + 1
 
@@ -199,7 +231,7 @@ class BlockchainDataCollector:
         last_call_time = 0
 
         # Create progress bar for blocks
-        block_range = range(creation_block, current_block + 1, self.blocks_period)
+        block_range = range(creation_block, end_block + 1, self.blocks_period)
         with tqdm(
             total=len(block_range),
             desc=f"{Fore.BLUE}Processing blocks{Style.RESET_ALL}",

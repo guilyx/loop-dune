@@ -35,3 +35,6 @@ services:
       - loop-network
 
 networks:
+  loop-network:
+    name: loop-network
+    driver: bridge

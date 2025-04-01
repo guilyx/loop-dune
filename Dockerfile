@@ -11,18 +11,14 @@ RUN pip install poetry
 # Set working directory
 WORKDIR /app
 
-# Copy poetry files
-COPY pyproject.toml poetry.lock ./
+# Copy all files first
+COPY . .
 
 # Configure poetry to not create a virtual environment
 RUN poetry config virtualenvs.create false
 
 # Install dependencies including dev dependencies for now
 RUN poetry install --no-interaction
-
-# Copy application code
-COPY loop_dune/ ./loop_dune/
-COPY config/ ./config/
 
 # Set environment variables
 ENV PYTHONPATH=/app
