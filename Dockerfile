@@ -6,20 +6,33 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Install poetry
-RUN curl -sSL https://install.python-poetry.org | python3 -
+ENV POETRY_VERSION=1.7.1
+ENV POETRY_HOME=/opt/poetry
+ENV POETRY_VENV=/opt/poetry-venv
+ENV POETRY_CACHE_DIR=/opt/.cache
+
+# Install poetry separated from system python
+RUN python3 -m venv $POETRY_VENV \
+    && $POETRY_VENV/bin/pip install -U pip setuptools \
+    && $POETRY_VENV/bin/pip install poetry==${POETRY_VERSION}
+
+# Add `poetry` to PATH
+ENV PATH="${PATH}:${POETRY_VENV}/bin"
 
 # Set working directory
 WORKDIR /app
 
-# Copy poetry files
-COPY pyproject.toml poetry.lock ./
+# Copy only requirements to cache them in docker layer
+COPY pyproject.toml ./
+
+# Project initialization
+RUN poetry config virtualenvs.create false
+
+# Copying our project
+COPY . .
 
 # Install dependencies
-RUN poetry config virtualenvs.create false \
-    && poetry install --no-interaction --no-ansi
-
-# Copy application code
-COPY . .
+RUN poetry install --no-interaction --no-ansi --no-root
 
 # Set environment variables
 ENV PYTHONPATH=/app
