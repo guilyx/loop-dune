@@ -34,8 +34,9 @@ RUN poetry config virtualenvs.create false
 # Copy the entire project, including config files and ABIs
 COPY . .
 
-# Install dependencies and the project itself
-RUN poetry install --no-interaction --no-ansi
+# Install dependencies and the project itself with scripts
+RUN poetry install --no-interaction --no-ansi && \
+    poetry run pip install -e .
 
 # Set environment variables
 ENV PYTHONPATH=/app
