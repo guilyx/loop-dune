@@ -1,33 +1,28 @@
-FROM python:3.9-slim
+FROM python:3.10-slim
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Poetry
-RUN pip install poetry
+# Install poetry
+RUN curl -sSL https://install.python-poetry.org | python3 -
 
 # Set working directory
 WORKDIR /app
 
-# Copy all files first
+# Copy poetry files
+COPY pyproject.toml poetry.lock ./
+
+# Install dependencies
+RUN poetry config virtualenvs.create false \
+    && poetry install --no-interaction --no-ansi
+
+# Copy application code
 COPY . .
-
-# Configure poetry to not create a virtual environment
-RUN poetry config virtualenvs.create false
-
-# Install dependencies including dev dependencies for now
-RUN poetry install --no-interaction
 
 # Set environment variables
 ENV PYTHONPATH=/app
-ENV PYTHONUNBUFFERED=1
 
-# Create non-root user
-RUN useradd -m -u 1000 appuser && \
-    chown -R appuser:appuser /app
-USER appuser
-
-# Run the sync service
-CMD ["python", "-m", "loop_dune.sync"]
+# Run the script
+CMD ["poetry", "run", "python", "loop_dune/scripts/collect_and_upload.py", "--cron", "0 0 * * *"]

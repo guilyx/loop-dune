@@ -1,38 +1,18 @@
 version: '3.8'
 
 services:
-  sync:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    environment:
-      - DUNE_API_KEY=${DUNE_API_KEY}
-      - ETH_RPC_URLS=${ETH_RPC_URLS}
-      - BLOCK_PERIOD=${BLOCK_PERIOD:-1000}
-      - BLOCK_RETRIEVAL_PERIOD=${BLOCK_RETRIEVAL_PERIOD:-0.1}
-      - PYTHONUNBUFFERED=1
-      - TZ=UTC
+  loop-dune:
+    build: .
     volumes:
       - ./data:/app/data
-      - ./logs:/app/logs
+    env_file:
+      - .env
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
     logging:
       driver: "json-file"
       options:
         max-size: "10m"
         max-file: "3"
-    deploy:
-      resources:
-        limits:
-          cpus: '1'
-          memory: 1G
-    networks:
-      - loop-network
 
 networks:
   loop-network:
