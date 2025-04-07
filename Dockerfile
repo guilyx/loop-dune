@@ -31,14 +31,19 @@ COPY pyproject.toml ./
 # Project initialization
 RUN poetry config virtualenvs.create false
 
-# Copying our project
+# Copy the entire project, including config files and ABIs
 COPY . .
 
-# Install dependencies
-RUN poetry install --no-interaction --no-ansi --no-root
+# Install dependencies and the project itself
+RUN poetry install --no-interaction --no-ansi
 
 # Set environment variables
 ENV PYTHONPATH=/app
+
+# Verify ABI files are present
+RUN ls -la /app/loop_dune/config/abis/eth/ && \
+    ls -la /app/loop_dune/config/abis/bnb/ && \
+    ls -la /app/loop_dune/config/abis/usd/
 
 # Run the script
 CMD ["poetry", "run", "python", "loop_dune/scripts/collect_and_upload.py", "--cron", "0 0 * * *"]

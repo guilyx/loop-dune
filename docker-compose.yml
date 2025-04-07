@@ -5,6 +5,7 @@ services:
     build: .
     volumes:
       - ./data:/app/data
+      - ./loop_dune/config/abis:/app/loop_dune/config/abis:ro
     env_file:
       - .env
     restart: unless-stopped
