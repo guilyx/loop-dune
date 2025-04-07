@@ -42,7 +42,6 @@ dist/
 .DS_Store
 
 # Project specific
-data/
 *.log
 *.csv
 *.json

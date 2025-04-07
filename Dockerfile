@@ -22,6 +22,9 @@ ENV PATH="${PATH}:${POETRY_VENV}/bin"
 # Set working directory
 WORKDIR /app
 
+# Create data directory and set permissions
+RUN mkdir -p /app/data && chmod 777 /app/data
+
 # Copy only requirements to cache them in docker layer
 COPY pyproject.toml ./
 
