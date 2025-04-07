@@ -7,28 +7,19 @@ import os
 # Contract configurations for different assets
 CONTRACTS = {
     "ETH": {
-        # "spectra_cdp": {
-        #     "name": "Spectra CDP Vault",
-        #     "address": "0x9BfCD3788f923186705259ae70A1192F601BeB47",
-        #     "abi_file": "eth/cdp_vault_spectra.json",
-        #     "functions_to_track": [
-        #         {
-        #             "name": "totalDebt",
-        #             "params": [],
-        #             "column_names": ["total_debt"],
-        #         },
-        #         {
-        #             "name": "vaultConfig",
-        #             "params": [],
-        #             "column_names": ["debt_floor", "liquidation_ratio"],
-        #         },
-        #         {
-        #             "name": "spotPrice",
-        #             "params": [],
-        #             "column_names": ["spot_price"],
-        #         },
-        #     ],
-        # },
+        "chain_id": "1",
+        "eth_cdp_vault": {
+            "name": "Spectra CDP Vault",
+            "address": "0x9BfCD3788f923186705259ae70A1192F601BeB47",
+            "abi_file": "eth/cdp_vault_spectra.json",
+            "functions_to_track": [
+                {
+                    "name": "spotPrice",
+                    "params": [],
+                    "column_names": ["spot_price"],
+                },
+            ],
+        },
         "lp_eth_pool": {
             "name": "LP-ETH Pool",
             "address": "0xa684EAf215ad323452e2B2bF6F817d4aa5C116ab",
@@ -38,11 +29,6 @@ CONTRACTS = {
                     "name": "totalBorrowed",
                     "params": [],
                     "column_names": ["total_borrowed"],
-                },
-                {
-                    "name": "totalDebtLimit",
-                    "params": [],
-                    "column_names": ["total_debt_limit"],
                 },
                 {
                     "name": "baseInterestRate",
@@ -99,18 +85,18 @@ CONTRACTS = {
                 },
             ],
         },
-        # "slp_eth": {
-        #     "name": "SLP-ETH",
-        #     "address": "0x3976d71e7DdFBaB9bD120Ec281B7d35fa0F28528",
-        #     "abi_file": "eth/staked_lpeth.json",
-        #     "functions_to_track": [
-        #         {
-        #             "name": "totalSupply",
-        #             "params": [],
-        #             "column_names": ["total_supply"],
-        #         },
-        #     ],
-        # },
+        "slp_eth": {
+            "name": "SLP-ETH",
+            "address": "0x3976d71e7DdFBaB9bD120Ec281B7d35fa0F28528",
+            "abi_file": "eth/staked_lpeth.json",
+            "functions_to_track": [
+                {
+                    "name": "totalSupply",
+                    "params": [],
+                    "column_names": ["total_supply"],
+                },
+            ],
+        },
         # "spectra_lp": {
         #     "name": "Spectra LP",
         #     "address": "0x2408569177553A427dd6956E1717f2fBE1a96F1D",
@@ -127,28 +113,19 @@ CONTRACTS = {
         # },
     },
     "USD": {
-        # "deusd_cdp": {
-        #     "name": "DEUSD CDP Vault",
-        #     "address": "0xbb23b7ACdE2B3A2E6446B16Cd3Dd471b0d80342c",
-        #     "abi_file": "eth/cdp_vault_spectra.json",  # Same ABI as ETH CDP
-        #     "functions_to_track": [
-        #         {
-        #             "name": "totalDebt",
-        #             "params": [],
-        #             "column_names": ["total_debt"],
-        #         },
-        #         {
-        #             "name": "vaultConfig",
-        #             "params": [],
-        #             "column_names": ["debt_floor", "liquidation_ratio"],
-        #         },
-        #         {
-        #             "name": "spotPrice",
-        #             "params": [],
-        #             "column_names": ["spot_price"],
-        #         },
-        #     ],
-        # },
+        "chain_id": "1",
+        "usd_cdp_vault": {
+            "name": "DEUSD CDP Vault",
+            "address": "0xbb23b7ACdE2B3A2E6446B16Cd3Dd471b0d80342c",
+            "abi_file": "eth/cdp_vault_spectra.json",  # Same ABI as ETH CDP
+            "functions_to_track": [
+                {
+                    "name": "spotPrice",
+                    "params": [],
+                    "column_names": ["spot_price"],
+                },
+            ],
+        },
         "lp_usd_pool": {
             "name": "LP-USD Pool",
             "address": "0x0eecBDbF7331B8a50FCd0Bf2C267Bf47BD876054",
@@ -158,11 +135,6 @@ CONTRACTS = {
                     "name": "totalBorrowed",
                     "params": [],
                     "column_names": ["total_borrowed"],
-                },
-                {
-                    "name": "totalDebtLimit",
-                    "params": [],
-                    "column_names": ["total_debt_limit"],
                 },
                 {
                     "name": "baseInterestRate",
@@ -232,6 +204,98 @@ CONTRACTS = {
             ],
         },
     },
+    "BNB": {
+        "chain_id": "56",
+        "bnb_cdp_vault": {
+            "name": "clisBNB CDP Vault",
+            "address": "0x03C07e6d561b664246058974dB31dbF1c1C0B416",
+            "abi_file": "eth/cdp_vault_spectra.json",  # Same ABI as ETH CDP
+            "functions_to_track": [
+                {
+                    "name": "spotPrice",
+                    "params": [],
+                    "column_names": ["spot_price"],
+                },
+            ],
+        },
+        "lp_bnb_pool": {
+            "name": "LP-BNB Pool",
+            "address": "0xed166436559fd3d7f44cb00cacda96eb999d789e",
+            "abi_file": "eth/lpeth.json",  # Same ABI as ETH pool
+            "functions_to_track": [
+                {
+                    "name": "totalBorrowed",
+                    "params": [],
+                    "column_names": ["total_borrowed"],
+                },
+                {
+                    "name": "baseInterestRate",
+                    "params": [],
+                    "column_names": ["base_interest_rate"],
+                },
+                {
+                    "name": "supplyRate",
+                    "params": [],
+                    "column_names": ["supply_rate"],
+                },
+                {
+                    "name": "availableLiquidity",
+                    "params": [],
+                    "column_names": ["available_liquidity"],
+                },
+                {
+                    "name": "expectedLiquidity",
+                    "params": [],
+                    "column_names": ["expected_liquidity"],
+                },
+                {
+                    "name": "totalSupply",
+                    "params": [],
+                    "column_names": ["total_supply"],
+                },
+                {
+                    "name": "balanceOf",
+                    "params": [
+                        "0x7Cdd4fc8715e5A45E0f9424b7D0e630E1aCF5BC4"
+                    ],  # Locked LP-USD contract address
+                    "column_names": ["locked_lp_bnb_balance"],
+                },
+                {
+                    "name": "creditManagerBorrowed",
+                    "params": [
+                        "0xbb23b7ACdE2B3A2E6446B16Cd3Dd471b0d80342c"  # deusdCDP address
+                    ],
+                    "column_names": ["credit_manager_borrowed"],
+                },
+                {
+                    "name": "creditManagerDebtLimit",
+                    "params": [
+                        "0xbb23b7ACdE2B3A2E6446B16Cd3Dd471b0d80342c"  # deusdCDP address
+                    ],
+                    "column_names": ["credit_manager_debt_limit"],
+                },
+                {
+                    "name": "creditManagerBorrowable",
+                    "params": [
+                        "0xbb23b7ACdE2B3A2E6446B16Cd3Dd471b0d80342c"  # deusdCDP address
+                    ],
+                    "column_names": ["credit_manager_borrowable"],
+                },
+            ],
+        },
+        "slp_bnb": {
+            "name": "SLP-BNB",
+            "address": "0x76a173580ac0456fd208a593722998d6b5b7063d",
+            "abi_file": "eth/staked_lpeth.json",  # Same ABI as SLP-ETH
+            "functions_to_track": [
+                {
+                    "name": "totalSupply",
+                    "params": [],
+                    "column_names": ["total_supply"],
+                },
+            ],
+        },
+    },
 }
 
 
@@ -258,6 +322,8 @@ def load_abi(contract_name: str, asset: str) -> Dict:
 
 
 # Load ABIs at module import time
-for asset in ["ETH", "USD"]:
+for asset in ["ETH", "USD", "BNB"]:
     for contract_name in CONTRACTS[asset]:
+        if contract_name == "chain_id":
+            continue
         CONTRACTS[asset][contract_name]["abi"] = load_abi(contract_name, asset)

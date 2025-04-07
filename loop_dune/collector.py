@@ -4,6 +4,8 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from typing import Dict, List, Any, Optional, Tuple
 import argparse
+import random
+import sys
 
 import pandas as pd
 from colorama import Fore, Style, init
@@ -26,44 +28,62 @@ load_dotenv()
 class BlockchainDataCollector:
     def __init__(self, asset: str = "ETH"):
         """
-        Initialize the data collector.
+        Initialize the blockchain data collector.
 
         Args:
-            asset: Asset type to collect data for (ETH or USD)
+            asset: Asset type to collect data for (ETH, USD, or BNB)
         """
-        if asset not in ["ETH", "USD"]:
-            raise ValueError("Asset must be either 'ETH' or 'USD'")
+        if asset not in ["ETH", "USD", "BNB"]:
+            raise ValueError("Asset must be either 'ETH', 'USD', or 'BNB")
 
         self.asset = asset
         self.contracts = CONTRACTS[asset]
+        self.chain_id = int(
+            self.contracts.get("chain_id", 1)
+        )  # Default to Ethereum mainnet (1)
 
-        # Initialize multiple Web3 instances for different RPCs
-        rpc_urls = os.getenv("ETH_RPC_URLS", "").split(",")
-        if not rpc_urls or not rpc_urls[0]:
-            raise ValueError("No RPC URLs provided in ETH_RPC_URLS")
+        # Initialize Web3 with multiple RPC URLs
+        if asset == "BNB":
+            rpc_urls = os.getenv(f"{asset}_RPC_URLS", "").split(",")
+            if not rpc_urls or not rpc_urls[0]:
+                raise ValueError(f"{asset}_RPC_URLS environment variable not set")
+        else:
+            rpc_urls = os.getenv(f"ETH_RPC_URLS", "").split(",")
+            if not rpc_urls or not rpc_urls[0]:
+                raise ValueError(f"ETH_RPC_URLS environment variable not set")
 
-        self.w3_instances = [Web3(Web3.HTTPProvider(url)) for url in rpc_urls]
-        self.current_w3_index = 0
+        self.rpc_urls = [url.strip() for url in rpc_urls if url.strip()]
+
+        self.rpc_urls = [url.strip() for url in rpc_urls if url.strip()]
+        self.w3 = Web3(Web3.HTTPProvider(random.choice(self.rpc_urls)))
+
+        # Add PoA middleware for BSC and other PoA chains
+        if self.chain_id in [56, 97]:  # BSC Mainnet and Testnet
+            from web3.middleware import geth_poa_middleware
+
+            self.w3.middleware_onion.inject(geth_poa_middleware, layer=0)
+            print(
+                f"{Fore.GREEN}Added PoA middleware for BSC (chain ID: {self.chain_id}){Style.RESET_ALL}"
+            )
+
+        if not self.w3.is_connected():
+            raise ConnectionError(f"Failed to connect to {asset} node")
+
+        print(
+            f"{Fore.GREEN}Initialized collector for {asset} (chain ID: {self.chain_id}){Style.RESET_ALL}"
+        )
+
         self.blocks_period = int(os.getenv("BLOCKS_PERIOD", "100"))
         self.block_retrieval_period = float(os.getenv("BLOCK_RETRIEVAL_PERIOD", "60"))
         self.data_dir = os.getenv("DATA_DIR", "data")
         os.makedirs(self.data_dir, exist_ok=True)
 
-        print(
-            f"\n{Fore.CYAN}Initialized collector with {len(self.w3_instances)} RPC endpoints{Style.RESET_ALL}"
-        )
         print(f"{Fore.CYAN}Blocks period: {self.blocks_period}{Style.RESET_ALL}")
         print(
             f"{Fore.CYAN}Block retrieval period: {self.block_retrieval_period}s{Style.RESET_ALL}"
         )
         print(f"{Fore.CYAN}Data directory: {self.data_dir}{Style.RESET_ALL}")
         print(f"{Fore.CYAN}Asset: {asset}{Style.RESET_ALL}\n")
-
-    def get_next_w3(self) -> Web3:
-        """Get the next Web3 instance in a round-robin fashion."""
-        w3 = self.w3_instances[self.current_w3_index]
-        self.current_w3_index = (self.current_w3_index + 1) % len(self.w3_instances)
-        return w3
 
     def get_contract_creation_block(self, contract_address: str) -> int:
         """Get the block number where the contract was created using Etherscan API."""
@@ -74,19 +94,18 @@ class BlockchainDataCollector:
 
         # Prepare API request parameters
         params = {
-            "chainid": 1,
+            "chainid": self.chain_id,
             "module": "contract",
             "action": "getcontractcreation",
             "contractaddresses": contract_address,
             "apikey": api_key,
         }
 
-        # Make API request
-        base_url = "https://api.etherscan.io/v2/api"
-        url = f"{base_url}?{urlencode(params)}"
+        # Make API request to the unified Etherscan API
+        url = f"https://api.etherscan.io/v2/api?{urlencode(params)}"
 
         print(
-            f"{Fore.YELLOW}Fetching contract creation block from Etherscan...{Style.RESET_ALL}"
+            f"{Fore.YELLOW}Fetching contract creation block from chain ID {self.chain_id}...{Style.RESET_ALL}"
         )
 
         try:
@@ -95,7 +114,7 @@ class BlockchainDataCollector:
             data = response.json()
 
             if data["status"] != "1":
-                raise ValueError(f"Etherscan API error: {data['message']}")
+                raise ValueError(f"Explorer API error: {data['message']}")
 
             if not data["result"]:
                 raise ValueError(
@@ -112,11 +131,11 @@ class BlockchainDataCollector:
             return creation_block
 
         except requests.exceptions.RequestException as e:
-            print(f"{Fore.RED}Error fetching from Etherscan API: {e}{Style.RESET_ALL}")
+            print(f"{Fore.RED}Error fetching from explorer API: {e}{Style.RESET_ALL}")
             raise
         except (KeyError, IndexError, ValueError) as e:
             print(
-                f"{Fore.RED}Error parsing Etherscan API response: {e}{Style.RESET_ALL}"
+                f"{Fore.RED}Error parsing explorer API response: {e}{Style.RESET_ALL}"
             )
             raise
 
@@ -144,8 +163,7 @@ class BlockchainDataCollector:
                 creation_blocks[contract_name] = creation_block
 
                 # Get block timestamp
-                w3 = self.get_next_w3()
-                block = w3.eth.get_block(creation_block)
+                block = self.w3.eth.get_block(creation_block)
                 timestamp = datetime.fromtimestamp(block.timestamp)
 
                 print(
@@ -175,8 +193,7 @@ class BlockchainDataCollector:
             Web3 contract instance
         """
         contract_config = self.contracts[contract_name]
-        w3 = self.get_next_w3()
-        return w3.eth.contract(
+        return self.w3.eth.contract(
             address=Web3.to_checksum_address(contract_config["address"]),
             abi=contract_config["abi"],
         )
@@ -184,54 +201,66 @@ class BlockchainDataCollector:
     def collect_contract_data(
         self,
         contract_name: str,
-        contract: Contract,
-        creation_block: int,
+        start_block: Optional[int] = None,
         end_block: Optional[int] = None,
+        blocks_period: Optional[int] = None,
     ) -> pd.DataFrame:
-        """Collect data for a specific contract.
+        """
+        Collect data for a specific contract.
 
         Args:
-            contract_name: Name of the contract
-            contract: Web3 contract instance
-            creation_block: Block number where the contract was created
-            end_block: Optional end block number. If None, uses current block.
+            contract_name: Name of the contract to collect data for
+            start_block: Block number to start collecting from (optional)
+            end_block: Block number to end collecting at (optional)
+            blocks_period: Number of blocks to collect data for each period (optional)
 
         Returns:
-            DataFrame containing the collected data
+            DataFrame with collected data
         """
+        print(f"\n{Fore.CYAN}Collecting data for {contract_name}...{Style.RESET_ALL}")
+
+        # Get contract configuration
         contract_config = self.contracts[contract_name]
-        contract_address = contract_config["address"]
+        contract = self.get_contract(contract_name)
 
-        print(
-            f"\n{Fore.GREEN}Collecting data for contract: {contract_name}{Style.RESET_ALL}"
-        )
-        print(f"{Fore.YELLOW}Address: {contract_address}{Style.RESET_ALL}")
-        print(f"{Fore.YELLOW}Start block: {creation_block}{Style.RESET_ALL}")
+        # Get contract creation block if start_block not provided
+        if start_block is None:
+            try:
+                start_block = self.get_contract_creation_block(
+                    contract_config["address"]
+                )
+            except Exception as e:
+                print(f"Error getting contract creation block: {e}")
+                return pd.DataFrame()
 
-        # Get current block from any Web3 instance if end_block not specified
+        # Set end_block to current block if not provided
         if end_block is None:
-            end_block = self.w3_instances[0].eth.block_number
-        print(f"{Fore.YELLOW}End block: {end_block}{Style.RESET_ALL}")
-        print(
-            f"{Fore.YELLOW}Functions to track: {[f['name'] for f in contract_config['functions_to_track']]}{Style.RESET_ALL}"
-        )
+            end_block = self.w3.eth.block_number
 
-        # Calculate actual blocks we'll process
-        total_blocks = end_block - creation_block
-        blocks_to_process = (total_blocks // self.blocks_period) * self.blocks_period
-        data_points = (blocks_to_process // self.blocks_period) + 1
+        # Use provided blocks_period or default
+        blocks_period = blocks_period or self.blocks_period
+
+        print(f"{Fore.YELLOW}Start block: {start_block}{Style.RESET_ALL}")
+        print(f"{Fore.YELLOW}End block: {end_block}{Style.RESET_ALL}")
+        print(f"{Fore.YELLOW}Using block period of {blocks_period}{Style.RESET_ALL}")
+
+        # Calculate total blocks and data points
+        total_blocks = end_block - start_block
+        blocks_to_process = (total_blocks // blocks_period) * blocks_period
+        data_points = (blocks_to_process // blocks_period) + 1
 
         print(f"{Fore.YELLOW}Total blocks in range: {total_blocks}{Style.RESET_ALL}")
         print(
-            f"{Fore.YELLOW}Blocks to process: {blocks_to_process} (every {self.blocks_period} blocks){Style.RESET_ALL}"
+            f"{Fore.YELLOW}Blocks to process: {blocks_to_process} (every {blocks_period} blocks){Style.RESET_ALL}"
         )
-        print(f"{Fore.YELLOW}Data points to collect: {data_points}{Style.RESET_ALL}\n")
+        print(f"{Fore.YELLOW}Data points to collect: {data_points}{Style.RESET_ALL}")
 
-        data_points_list = []
+        # Collect data for each block
+        data = []
         last_call_time = 0
 
         # Create progress bar for blocks
-        block_range = range(creation_block, end_block + 1, self.blocks_period)
+        block_range = range(start_block, end_block + 1, blocks_period)
         with tqdm(
             total=len(block_range),
             desc=f"{Fore.BLUE}Processing blocks{Style.RESET_ALL}",
@@ -247,9 +276,8 @@ class BlockchainDataCollector:
                     )
                 last_call_time = time.time()
 
-                # Get block timestamp using round-robin RPC
-                w3 = self.get_next_w3()
-                block = w3.eth.get_block(block_number)
+                # Get block timestamp
+                block = self.w3.eth.get_block(block_number)
                 timestamp = datetime.fromtimestamp(block.timestamp)
 
                 # Update progress bar description with current block info
@@ -257,7 +285,7 @@ class BlockchainDataCollector:
                     f"{Fore.BLUE}Processing block {block_number} ({timestamp}){Style.RESET_ALL}"
                 )
 
-                # Collect data for each function to track
+                # Collect data for all functions at this block
                 row_data = {"block_number": block_number, "timestamp": timestamp}
 
                 for func_config in contract_config["functions_to_track"]:
@@ -279,20 +307,31 @@ class BlockchainDataCollector:
                             row_data[func_config["column_names"][0]] = value
                     except Exception as e:
                         print(
-                            f"\n{Fore.RED}Error collecting {func_config['name']} at block {block_number}: {e}{Style.RESET_ALL}"
+                            f"{Fore.RED}Error collecting {func_config['name']} at block {block_number}: {e}{Style.RESET_ALL}"
                         )
-                        continue
+                        # Continue with other functions even if one fails
 
-                data_points_list.append(row_data)
+                data.append(row_data)
                 pbar.update(1)
 
-        print(
-            f"\n{Fore.GREEN}Completed collecting data for {contract_name}{Style.RESET_ALL}"
-        )
-        print(
-            f"{Fore.GREEN}Total data points collected: {len(data_points_list)}{Style.RESET_ALL}"
-        )
-        return pd.DataFrame(data_points_list)
+        # Create DataFrame
+        df = pd.DataFrame(data)
+
+        # Save to CSV
+        csv_path = os.path.join(self.data_dir, f"{contract_name}.csv")
+        if os.path.exists(csv_path):
+            # Append to existing CSV
+            existing_df = pd.read_csv(csv_path)
+            df = (
+                pd.concat([existing_df, df])
+                .drop_duplicates(subset=["block_number"])
+                .sort_values("block_number")
+            )
+
+        df.to_csv(csv_path, index=False)
+        print(f"{Fore.GREEN}Saved {len(df)} data points to {csv_path}{Style.RESET_ALL}")
+
+        return df
 
     def process_contract(
         self, contract_name: str, creation_block: int
@@ -300,14 +339,10 @@ class BlockchainDataCollector:
         """Process a single contract and return its DataFrame."""
         try:
             contract_config = self.contracts[contract_name]
-            w3 = self.get_next_w3()
 
-            contract = w3.eth.contract(
-                address=Web3.to_checksum_address(contract_config["address"]),
-                abi=contract_config["abi"],
-            )
+            contract = self.get_contract(contract_name)
 
-            df = self.collect_contract_data(contract_name, contract, creation_block)
+            df = self.collect_contract_data(contract_name, creation_block)
             return df
         except Exception as e:
             print(
@@ -325,7 +360,7 @@ class BlockchainDataCollector:
             return
 
         contracts = list(creation_blocks.keys())
-        max_workers = min(len(self.w3_instances), len(contracts))
+        max_workers = min(len(self.rpc_urls), len(contracts))
 
         print(
             f"\n{Fore.CYAN}Starting data collection for {len(contracts)} contracts{Style.RESET_ALL}"
@@ -371,19 +406,155 @@ class BlockchainDataCollector:
 
         print(f"\n{Fore.GREEN}Data collection completed!{Style.RESET_ALL}")
 
+    def collect_historical_data(
+        self, end_block: Optional[int] = None, blocks_period: Optional[int] = None
+    ) -> Dict[str, pd.DataFrame]:
+        """
+        Collect historical data for all contracts.
+
+        Args:
+            end_block: Optional end block number. If not provided, uses the current block.
+            blocks_period: Optional number of blocks to collect data for each period.
+
+        Returns:
+            Dictionary of contract names to DataFrames
+        """
+        print(
+            f"\n{Fore.CYAN}Collecting historical data for {self.asset}...{Style.RESET_ALL}"
+        )
+
+        # Get current block from any Web3 instance if end_block not specified
+        if end_block is None:
+            end_block = self.w3.eth.block_number
+        print(f"{Fore.YELLOW}End block: {end_block}{Style.RESET_ALL}")
+        print(
+            f"{Fore.YELLOW}Blocks period: {blocks_period or self.blocks_period}{Style.RESET_ALL}"
+        )
+
+        # Get contract creation blocks
+        creation_blocks = {}
+        for contract_name in self.contracts:
+            if contract_name == "chain_id":
+                continue
+            try:
+                creation_block = self.get_contract_creation_block(
+                    self.contracts[contract_name]["address"]
+                )
+                creation_blocks[contract_name] = creation_block
+            except Exception as e:
+                print(
+                    f"{Fore.RED}Error getting creation block for {contract_name}: {e}{Style.RESET_ALL}"
+                )
+                continue
+
+        # Collect data for each contract
+        results = {}
+        contracts = list(creation_blocks.keys())
+        max_workers = min(len(self.rpc_urls), len(contracts))
+
+        print(
+            f"{Fore.CYAN}Collecting data for {len(contracts)} contracts with {max_workers} workers{Style.RESET_ALL}"
+        )
+
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = []
+            for contract_name in contracts:
+                creation_block = creation_blocks[contract_name]
+
+                # Check if CSV file exists and get the latest block number
+                csv_path = os.path.join(self.data_dir, f"{contract_name}.csv")
+                start_block = creation_block
+
+                if os.path.exists(csv_path):
+                    try:
+                        existing_df = pd.read_csv(csv_path)
+                        if (
+                            not existing_df.empty
+                            and "block_number" in existing_df.columns
+                        ):
+                            latest_block = existing_df["block_number"].max()
+                            if latest_block < end_block:
+                                start_block = latest_block + 1
+                                print(
+                                    f"{Fore.GREEN}Resuming collection for {contract_name} from block {start_block}{Style.RESET_ALL}"
+                                )
+                            else:
+                                print(
+                                    f"{Fore.YELLOW}Data for {contract_name} is already up to date{Style.RESET_ALL}"
+                                )
+                                results[contract_name] = existing_df
+                                continue
+                    except Exception as e:
+                        print(
+                            f"{Fore.RED}Error reading existing CSV for {contract_name}: {e}{Style.RESET_ALL}"
+                        )
+                        # Continue with the original start_block if there's an error
+
+                if start_block >= end_block:
+                    print(
+                        f"{Fore.YELLOW}No new blocks to collect for {contract_name}{Style.RESET_ALL}"
+                    )
+                    if os.path.exists(csv_path):
+                        results[contract_name] = pd.read_csv(csv_path)
+                    continue
+
+                futures.append(
+                    executor.submit(
+                        self.collect_contract_data,
+                        contract_name,
+                        start_block,
+                        end_block,
+                        blocks_period,
+                    )
+                )
+
+            # Collect results
+            for contract_name, future in zip(contracts, futures):
+                try:
+                    df = future.result()
+                    if df is not None and not df.empty:
+                        results[contract_name] = df
+                except Exception as e:
+                    print(
+                        f"{Fore.RED}Error collecting data for {contract_name}: {e}{Style.RESET_ALL}"
+                    )
+
+        return results
+
 
 def main():
-    parser = argparse.ArgumentParser(description="Collect blockchain data")
+    """Main function to collect historical data for all contracts."""
+    parser = argparse.ArgumentParser(
+        description="Collect historical data for contracts"
+    )
     parser.add_argument(
         "--asset",
-        choices=["ETH", "USD"],
-        default="ETH",
-        help="Asset to collect data for (default: ETH)",
+        type=str,
+        choices=["ETH", "USD", "BNB"],
+        required=True,
+        help="Asset to collect data for (ETH, USD, or BNB)",
+    )
+    parser.add_argument(
+        "--end-block",
+        type=int,
+        help="Block number to end collecting at (optional)",
+    )
+    parser.add_argument(
+        "--blocks-period",
+        type=int,
+        help="Number of blocks to collect data for each period (optional)",
     )
     args = parser.parse_args()
 
-    collector = BlockchainDataCollector(asset=args.asset)
-    collector.collect_all_data()
+    try:
+        collector = BlockchainDataCollector(args.asset)
+        collector.collect_historical_data(
+            end_block=args.end_block,
+            blocks_period=args.blocks_period,
+        )
+    except Exception as e:
+        print(f"Error collecting data: {e}")
+        sys.exit(1)
 
 
 if __name__ == "__main__":

@@ -29,18 +29,28 @@ class DuneSync:
         Initialize the Dune sync manager.
 
         Args:
-            asset: Asset type to sync (ETH or USD)
+            asset: Asset type to sync (ETH, USD, or BNB)
             namespace: Dune namespace for tables
         """
-        if asset not in ["ETH", "USD"]:
-            raise ValueError("Asset must be either 'ETH' or 'USD'")
+        if asset not in ["ETH", "USD", "BNB"]:
+            raise ValueError("Asset must be either 'ETH', 'USD', or 'BNB'")
 
         self.asset = asset
         self.namespace = namespace
         self.contracts = CONTRACTS[asset]
+        self.chain_id = int(
+            self.contracts.get("chain_id", 1)
+        )  # Default to Ethereum mainnet (1)
         self.api_key = os.getenv("DUNE_API_KEY")
         if not self.api_key:
             raise ValueError("DUNE_API_KEY environment variable not set")
+
+        # Check for Etherscan API key
+        self.etherscan_api_key = os.getenv("ETHERSCAN_API_KEY")
+        if not self.etherscan_api_key:
+            print(
+                f"{Fore.YELLOW}Warning: ETHERSCAN_API_KEY not set. Some features may not work.{Style.RESET_ALL}"
+            )
 
         self.base_url = "https://api.dune.com/api/v1"
         self.headers = {
@@ -49,14 +59,24 @@ class DuneSync:
         }
 
         # Initialize Web3 with multiple RPC URLs
-        rpc_urls = os.getenv("ETH_RPC_URLS", "").split(",")
+        rpc_urls = os.getenv(f"{asset}_RPC_URLS", "").split(",")
         if not rpc_urls or not rpc_urls[0]:
-            raise ValueError("ETH_RPC_URLS environment variable not set")
+            raise ValueError(f"{asset}_RPC_URLS environment variable not set")
 
         self.rpc_urls = [url.strip() for url in rpc_urls if url.strip()]
         self.w3 = Web3(Web3.HTTPProvider(random.choice(self.rpc_urls)))
+
+        # Add PoA middleware for BSC and other PoA chains
+        if self.chain_id in [56, 97]:  # BSC Mainnet and Testnet
+            from web3.middleware import geth_poa_middleware
+
+            self.w3.middleware_onion.inject(geth_poa_middleware, layer=0)
+            print(
+                f"{Fore.GREEN}Added PoA middleware for BSC (chain ID: {self.chain_id}){Style.RESET_ALL}"
+            )
+
         if not self.w3.is_connected():
-            raise ConnectionError("Failed to connect to Ethereum node")
+            raise ConnectionError(f"Failed to connect to {asset} node")
 
         # Get environment variables
         self.block_period = int(os.getenv("BLOCK_PERIOD", "1000"))
@@ -301,40 +321,35 @@ class DuneSync:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Sync data with Dune")
+    parser = argparse.ArgumentParser(
+        description="Sync blockchain data to Dune Analytics"
+    )
     parser.add_argument(
         "--asset",
-        choices=["ETH", "USD"],
+        choices=["ETH", "USD", "BNB"],
         default="ETH",
         help="Asset to sync data for (default: ETH)",
     )
     parser.add_argument(
         "--namespace",
         default="rangonomics",
-        help="Dune namespace (default: rangonomics)",
+        help="Dune namespace for tables (default: rangonomics)",
     )
     parser.add_argument(
-        "--daily",
-        action="store_true",
-        help="Run daily sync at midnight",
+        "--mode",
+        choices=["historical", "daily", "both"],
+        default="both",
+        help="Sync mode (default: both)",
     )
-
     args = parser.parse_args()
 
-    try:
-        sync = DuneSync(asset=args.asset, namespace=args.namespace)
+    sync = DuneSync(asset=args.asset, namespace=args.namespace)
 
-        # Always run historical sync first
+    if args.mode in ["historical", "both"]:
+        sync.sync_historical_data()
 
-        if args.daily:
-            # Run daily sync
-            sync.schedule_daily_sync()
-
-        else:
-            sync.sync_historical_data()
-
-    except Exception as e:
-        print(f"{Fore.RED}Error: {str(e)}{Style.RESET_ALL}")
+    if args.mode in ["daily", "both"]:
+        sync.sync_daily_data()
 
 
 if __name__ == "__main__":
