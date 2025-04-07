@@ -43,8 +43,6 @@ dist/
 
 # Project specific
 *.log
-*.json
-!config/*.json
 
 # Heroku
 *.pyc

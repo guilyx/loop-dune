@@ -1,0 +1,956 @@
+[
+  {
+    "inputs": [
+      {
+        "components": [
+          {
+            "internalType": "contract IPoolV3",
+            "name": "pool",
+            "type": "address"
+          },
+          {
+            "internalType": "contract IOracle",
+            "name": "oracle",
+            "type": "address"
+          },
+          {
+            "internalType": "contract IERC20",
+            "name": "token",
+            "type": "address"
+          },
+          { "internalType": "uint256", "name": "tokenScale", "type": "uint256" }
+        ],
+        "internalType": "struct CDPVaultConstants",
+        "name": "constants",
+        "type": "tuple"
+      },
+      {
+        "components": [
+          { "internalType": "uint128", "name": "debtFloor", "type": "uint128" },
+          {
+            "internalType": "uint64",
+            "name": "liquidationRatio",
+            "type": "uint64"
+          },
+          {
+            "internalType": "uint64",
+            "name": "liquidationPenalty",
+            "type": "uint64"
+          },
+          {
+            "internalType": "uint64",
+            "name": "liquidationDiscount",
+            "type": "uint64"
+          },
+          { "internalType": "address", "name": "roleAdmin", "type": "address" },
+          {
+            "internalType": "address",
+            "name": "vaultAdmin",
+            "type": "address"
+          },
+          { "internalType": "address", "name": "pauseAdmin", "type": "address" }
+        ],
+        "internalType": "struct CDPVaultConfig",
+        "name": "config",
+        "type": "tuple"
+      }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "constructor"
+  },
+  { "inputs": [], "name": "CDPVault__BadDebt", "type": "error" },
+  {
+    "inputs": [],
+    "name": "CDPVault__liquidatePosition_invalidParameters",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "CDPVault__liquidatePosition_invalidSpotPrice",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "CDPVault__liquidatePosition_notUnsafe",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "CDPVault__modifyCollateralAndDebt_maxUtilizationRatio",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "CDPVault__modifyCollateralAndDebt_noPermission",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "CDPVault__modifyCollateralAndDebt_notSafe",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "CDPVault__modifyPosition_debtFloor",
+    "type": "error"
+  },
+  { "inputs": [], "name": "CDPVault__noBadDebt", "type": "error" },
+  {
+    "inputs": [],
+    "name": "CDPVault__recoverERC20_invalidToken",
+    "type": "error"
+  },
+  { "inputs": [], "name": "CDPVault__repayAmountNotEnough", "type": "error" },
+  {
+    "inputs": [],
+    "name": "CDPVault__setParameter_unrecognizedParameter",
+    "type": "error"
+  },
+  { "inputs": [], "name": "CDPVault__tooHighRepayAmount", "type": "error" },
+  { "inputs": [], "name": "Math__add_overflow_signed", "type": "error" },
+  { "inputs": [], "name": "Math__mul_overflow_signed", "type": "error" },
+  { "inputs": [], "name": "Math__toInt256_overflow", "type": "error" },
+  {
+    "inputs": [],
+    "name": "Permission__modifyPermission_notPermitted",
+    "type": "error"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "position",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "collateralReleased",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "normalDebtRepaid",
+        "type": "uint256"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "liquidator",
+        "type": "address"
+      }
+    ],
+    "name": "LiquidatePosition",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "position",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "collateralizer",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "creditor",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "int256",
+        "name": "deltaCollateral",
+        "type": "int256"
+      },
+      {
+        "indexed": false,
+        "internalType": "int256",
+        "name": "deltaDebt",
+        "type": "int256"
+      }
+    ],
+    "name": "ModifyCollateralAndDebt",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "authorizer",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "owner",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "caller",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "bool",
+        "name": "grant",
+        "type": "bool"
+      }
+    ],
+    "name": "ModifyPermission",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "position",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "debt",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "collateral",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "totalDebt",
+        "type": "uint256"
+      }
+    ],
+    "name": "ModifyPosition",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "account",
+        "type": "address"
+      }
+    ],
+    "name": "Paused",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "bytes32",
+        "name": "role",
+        "type": "bytes32"
+      },
+      {
+        "indexed": true,
+        "internalType": "bytes32",
+        "name": "previousAdminRole",
+        "type": "bytes32"
+      },
+      {
+        "indexed": true,
+        "internalType": "bytes32",
+        "name": "newAdminRole",
+        "type": "bytes32"
+      }
+    ],
+    "name": "RoleAdminChanged",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "bytes32",
+        "name": "role",
+        "type": "bytes32"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "account",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "sender",
+        "type": "address"
+      }
+    ],
+    "name": "RoleGranted",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "bytes32",
+        "name": "role",
+        "type": "bytes32"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "account",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "sender",
+        "type": "address"
+      }
+    ],
+    "name": "RoleRevoked",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "bytes32",
+        "name": "parameter",
+        "type": "bytes32"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "data",
+        "type": "uint256"
+      }
+    ],
+    "name": "SetParameter",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "bytes32",
+        "name": "parameter",
+        "type": "bytes32"
+      },
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "data",
+        "type": "address"
+      }
+    ],
+    "name": "SetParameter",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "owner",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "agent",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "bool",
+        "name": "grant",
+        "type": "bool"
+      }
+    ],
+    "name": "SetPermittedAgent",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "account",
+        "type": "address"
+      }
+    ],
+    "name": "Unpaused",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "vault",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "token",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "owner",
+        "type": "address"
+      }
+    ],
+    "name": "VaultCreated",
+    "type": "event"
+  },
+  {
+    "inputs": [],
+    "name": "DEFAULT_ADMIN_ROLE",
+    "outputs": [{ "internalType": "bytes32", "name": "", "type": "bytes32" }],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "address", "name": "borrower", "type": "address" },
+      { "internalType": "address", "name": "position", "type": "address" },
+      { "internalType": "uint256", "name": "amount", "type": "uint256" }
+    ],
+    "name": "borrow",
+    "outputs": [
+      { "internalType": "uint256", "name": "borrowAmount", "type": "uint256" }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "address", "name": "rewardToken", "type": "address" },
+      { "internalType": "uint256", "name": "earnedAmount", "type": "uint256" },
+      { "internalType": "uint256", "name": "claimAmount", "type": "uint256" },
+      {
+        "internalType": "bytes32[]",
+        "name": "merkleProof",
+        "type": "bytes32[]"
+      }
+    ],
+    "name": "claimSpectraRewards",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "address", "name": "to", "type": "address" },
+      { "internalType": "uint256", "name": "amount", "type": "uint256" }
+    ],
+    "name": "deposit",
+    "outputs": [
+      { "internalType": "uint256", "name": "tokenAmount", "type": "uint256" }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "address", "name": "position", "type": "address" }
+    ],
+    "name": "getDebtData",
+    "outputs": [
+      {
+        "components": [
+          { "internalType": "uint256", "name": "debt", "type": "uint256" },
+          {
+            "internalType": "uint256",
+            "name": "cumulativeIndexNow",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "cumulativeIndexLastUpdate",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint128",
+            "name": "cumulativeQuotaInterest",
+            "type": "uint128"
+          },
+          {
+            "internalType": "uint192",
+            "name": "cumulativeQuotaIndexNow",
+            "type": "uint192"
+          },
+          {
+            "internalType": "uint192",
+            "name": "cumulativeQuotaIndexLU",
+            "type": "uint192"
+          },
+          {
+            "internalType": "uint256",
+            "name": "accruedInterest",
+            "type": "uint256"
+          }
+        ],
+        "internalType": "struct CDPVault.DebtData",
+        "name": "",
+        "type": "tuple"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "address", "name": "position", "type": "address" }
+    ],
+    "name": "getDebtInfo",
+    "outputs": [
+      { "internalType": "uint256", "name": "debt", "type": "uint256" },
+      {
+        "internalType": "uint256",
+        "name": "accruedInterest",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "cumulativeQuotaInterest",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "address", "name": "owner", "type": "address" }
+    ],
+    "name": "getRewards",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "bytes32", "name": "role", "type": "bytes32" }
+    ],
+    "name": "getRoleAdmin",
+    "outputs": [{ "internalType": "bytes32", "name": "", "type": "bytes32" }],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "bytes32", "name": "role", "type": "bytes32" },
+      { "internalType": "address", "name": "account", "type": "address" }
+    ],
+    "name": "grantRole",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "address", "name": "owner", "type": "address" },
+      { "internalType": "address", "name": "caller", "type": "address" }
+    ],
+    "name": "hasPermission",
+    "outputs": [{ "internalType": "bool", "name": "", "type": "bool" }],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "bytes32", "name": "role", "type": "bytes32" },
+      { "internalType": "address", "name": "account", "type": "address" }
+    ],
+    "name": "hasRole",
+    "outputs": [{ "internalType": "bool", "name": "", "type": "bool" }],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "address", "name": "owner", "type": "address" },
+      { "internalType": "uint256", "name": "repayAmount", "type": "uint256" }
+    ],
+    "name": "liquidatePosition",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "address", "name": "owner", "type": "address" },
+      { "internalType": "uint256", "name": "repayAmount", "type": "uint256" }
+    ],
+    "name": "liquidatePositionBadDebt",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "liquidationConfig",
+    "outputs": [
+      {
+        "internalType": "uint64",
+        "name": "liquidationPenalty",
+        "type": "uint64"
+      },
+      {
+        "internalType": "uint64",
+        "name": "liquidationDiscount",
+        "type": "uint64"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "address", "name": "owner", "type": "address" },
+      {
+        "internalType": "address",
+        "name": "collateralizer",
+        "type": "address"
+      },
+      { "internalType": "address", "name": "creditor", "type": "address" },
+      { "internalType": "int256", "name": "deltaCollateral", "type": "int256" },
+      { "internalType": "int256", "name": "deltaDebt", "type": "int256" }
+    ],
+    "name": "modifyCollateralAndDebt",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "address", "name": "owner", "type": "address" },
+      { "internalType": "address", "name": "caller", "type": "address" },
+      { "internalType": "bool", "name": "permitted", "type": "bool" }
+    ],
+    "name": "modifyPermission",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "address", "name": "caller", "type": "address" },
+      { "internalType": "bool", "name": "permitted", "type": "bool" }
+    ],
+    "name": "modifyPermission",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "oracle",
+    "outputs": [
+      { "internalType": "contract IOracle", "name": "", "type": "address" }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "pause",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "paused",
+    "outputs": [{ "internalType": "bool", "name": "", "type": "bool" }],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "pausedAt",
+    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "pool",
+    "outputs": [
+      { "internalType": "contract IPoolV3", "name": "", "type": "address" }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "poolQuotaKeeper",
+    "outputs": [{ "internalType": "address", "name": "", "type": "address" }],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "poolUnderlying",
+    "outputs": [
+      { "internalType": "contract IERC20", "name": "", "type": "address" }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "poolUnderlyingScale",
+    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [{ "internalType": "address", "name": "", "type": "address" }],
+    "name": "positions",
+    "outputs": [
+      { "internalType": "uint256", "name": "collateral", "type": "uint256" },
+      { "internalType": "uint256", "name": "debt", "type": "uint256" },
+      {
+        "internalType": "uint256",
+        "name": "lastDebtUpdate",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "cumulativeIndexLastUpdate",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint192",
+        "name": "cumulativeQuotaIndexLU",
+        "type": "uint192"
+      },
+      {
+        "internalType": "uint128",
+        "name": "cumulativeQuotaInterest",
+        "type": "uint128"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "address", "name": "position", "type": "address" }
+    ],
+    "name": "quotasInterest",
+    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "address", "name": "tokenAddress", "type": "address" },
+      { "internalType": "address", "name": "to", "type": "address" },
+      { "internalType": "uint256", "name": "tokenAmount", "type": "uint256" }
+    ],
+    "name": "recoverERC20",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "bytes32", "name": "role", "type": "bytes32" },
+      { "internalType": "address", "name": "account", "type": "address" }
+    ],
+    "name": "renounceRole",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "address", "name": "borrower", "type": "address" },
+      { "internalType": "address", "name": "position", "type": "address" },
+      { "internalType": "uint256", "name": "amount", "type": "uint256" }
+    ],
+    "name": "repay",
+    "outputs": [
+      { "internalType": "uint256", "name": "repayAmount", "type": "uint256" }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "bytes32", "name": "role", "type": "bytes32" },
+      { "internalType": "address", "name": "account", "type": "address" }
+    ],
+    "name": "revokeRole",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "rewardController",
+    "outputs": [
+      {
+        "internalType": "contract IChefIncentivesController",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "rewardManager",
+    "outputs": [
+      {
+        "internalType": "contract IRewardManager",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "bytes32", "name": "parameter", "type": "bytes32" },
+      { "internalType": "uint256", "name": "data", "type": "uint256" }
+    ],
+    "name": "setParameter",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "bytes32", "name": "parameter", "type": "bytes32" },
+      { "internalType": "address", "name": "data", "type": "address" }
+    ],
+    "name": "setParameter",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "address", "name": "agent", "type": "address" },
+      { "internalType": "bool", "name": "permitted", "type": "bool" }
+    ],
+    "name": "setPermissionAgent",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "spotPrice",
+    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "bytes4", "name": "interfaceId", "type": "bytes4" }
+    ],
+    "name": "supportsInterface",
+    "outputs": [{ "internalType": "bool", "name": "", "type": "bool" }],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "token",
+    "outputs": [
+      { "internalType": "contract IERC20", "name": "", "type": "address" }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "tokenScale",
+    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "totalDebt",
+    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "unpause",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "vaultConfig",
+    "outputs": [
+      { "internalType": "uint128", "name": "debtFloor", "type": "uint128" },
+      { "internalType": "uint64", "name": "liquidationRatio", "type": "uint64" }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "address", "name": "position", "type": "address" }
+    ],
+    "name": "virtualDebt",
+    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "address", "name": "to", "type": "address" },
+      { "internalType": "uint256", "name": "amount", "type": "uint256" }
+    ],
+    "name": "withdraw",
+    "outputs": [
+      { "internalType": "uint256", "name": "tokenAmount", "type": "uint256" }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  }
+]
