@@ -10,6 +10,8 @@ import time
 import argparse
 from typing import List, Dict, Tuple
 from datetime import datetime
+from web3 import Web3
+import json
 
 from colorama import Fore, Style, init
 
@@ -25,6 +27,121 @@ BLOCK_PERIODS = {
     "USD": 3500,
     "BNB": 14000,
 }
+
+# ERC20 ABI for balanceOf function
+ERC20_ABI = [
+    {
+        "constant": True,
+        "inputs": [{"name": "_owner", "type": "address"}],
+        "name": "balanceOf",
+        "outputs": [{"name": "balance", "type": "uint256"}],
+        "type": "function",
+    }
+]
+
+
+def collect_token_balance(
+    web3: Web3,
+    token_address: str,
+    contract_address: str,
+    start_block: int,
+    end_block: int,
+    block_period: int,
+) -> List[Dict]:
+    """
+    Collect token balances for a contract over a range of blocks.
+
+    Args:
+        web3: Web3 instance
+        token_address: Address of the token contract
+        contract_address: Address of the contract to check balance for
+        start_block: Starting block number
+        end_block: Ending block number
+        block_period: Number of blocks between samples
+
+    Returns:
+        List of dictionaries containing block numbers and balances
+    """
+    token_contract = web3.eth.contract(address=token_address, abi=ERC20_ABI)
+    balances = []
+
+    for block in range(start_block, end_block + 1, block_period):
+        try:
+            balance = token_contract.functions.balanceOf(contract_address).call(
+                block_identifier=block
+            )
+            balances.append(
+                {
+                    "block": block,
+                    "balance": balance,
+                    "timestamp": web3.eth.get_block(block)["timestamp"],
+                }
+            )
+        except Exception as e:
+            print(f"Error getting balance at block {block}: {e}")
+            continue
+
+    return balances
+
+
+def collect_balances_for_asset(asset: str) -> bool:
+    """
+    Collect token balances for a specific asset.
+
+    Args:
+        asset: Asset to collect balances for
+
+    Returns:
+        True if successful, False otherwise
+    """
+    print(f"\n{Fore.CYAN}{'=' * 50}{Style.RESET_ALL}")
+    print(f"{Fore.CYAN}Collecting balances for {asset}{Style.RESET_ALL}")
+    print(f"{Fore.CYAN}{'=' * 50}{Style.RESET_ALL}")
+
+    # Load contract configurations
+    with open("loop_dune/config/contracts.py", "r") as f:
+        contracts_config = eval(f.read())
+
+    balances_config = contracts_config["CONTRACTS"][asset]["balances"]
+
+    for balance_config in balances_config:
+        try:
+            # Get current block
+            current_block = web3.eth.block_number
+
+            # Collect balances
+            balances = collect_token_balance(
+                web3,
+                balance_config["token_address"],
+                balance_config["contract_address"],
+                current_block - BLOCK_PERIODS[asset],  # Start from last block period
+                current_block,
+                BLOCK_PERIODS[asset],
+            )
+
+            # Save to CSV
+            output_file = f"data/{asset.lower()}_{balance_config['name'].lower().replace(' ', '_')}.csv"
+            os.makedirs("data", exist_ok=True)
+
+            with open(output_file, "w") as f:
+                f.write("block,timestamp,balance\n")
+                for balance in balances:
+                    f.write(
+                        f"{balance['block']},{balance['timestamp']},{balance['balance']}\n"
+                    )
+
+            print(
+                f"{Fore.GREEN}Successfully collected balances for {balance_config['name']}{Style.RESET_ALL}"
+            )
+
+        except Exception as e:
+            print(
+                f"{Fore.RED}Error collecting balances for {balance_config['name']}: {e}{Style.RESET_ALL}"
+            )
+            continue
+
+    return True
+
 
 # Contract configurations for each asset
 CONTRACTS = {
@@ -227,15 +344,25 @@ def run_collection_and_upload():
         collect_success = collect_data_for_asset(asset)
 
         if collect_success:
-            # Upload data
-            upload_success = upload_data_for_asset(asset)
+            # Collect balances
+            balance_success = collect_balances_for_asset(asset)
 
-            if upload_success:
-                print(
-                    f"{Fore.GREEN}Successfully collected and uploaded data for {asset}{Style.RESET_ALL}"
-                )
+            if balance_success:
+                # Upload data
+                upload_success = upload_data_for_asset(asset)
+
+                if upload_success:
+                    print(
+                        f"{Fore.GREEN}Successfully collected and uploaded data for {asset}{Style.RESET_ALL}"
+                    )
+                else:
+                    print(
+                        f"{Fore.RED}Failed to upload data for {asset}{Style.RESET_ALL}"
+                    )
             else:
-                print(f"{Fore.RED}Failed to upload data for {asset}{Style.RESET_ALL}")
+                print(
+                    f"{Fore.RED}Failed to collect balances for {asset}{Style.RESET_ALL}"
+                )
         else:
             print(
                 f"{Fore.RED}Failed to collect data for {asset}. Skipping upload.{Style.RESET_ALL}"

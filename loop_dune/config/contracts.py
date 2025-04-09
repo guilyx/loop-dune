@@ -8,6 +8,20 @@ import os
 CONTRACTS = {
     "ETH": {
         "chain_id": "1",
+        "balances": [
+            {
+                "contract_address": "0x9BfCD3788f923186705259ae70A1192F601BeB47",  # yneth CDP Vault
+                "token_address": "0x2408569177553A427dd6956E1717f2fBE1a96F1D",  # WETH
+                "name": "ynETH CDP Balance",
+                "description": "ynETH balance in CDP Vault",
+            },
+            {
+                "contract_address": "0x9c5EE26b9623cA864693C575a8fBc8933ae964E7",  # ynethx CDP Vault
+                "token_address": "0xbc48c48789031a130f957c59e07b7f987aa642de",  # WETH
+                "name": "ynETHx CDP Vault WETH Balance",
+                "description": "ynETHx balance in CDP Vault",
+            },
+        ],
         "eth_yneth_cdp_vault": {
             "name": "Spectra yneth CDP Vault",
             "address": "0x9BfCD3788f923186705259ae70A1192F601BeB47",
@@ -126,6 +140,14 @@ CONTRACTS = {
     },
     "USD": {
         "chain_id": "1",
+        "balances": [
+            {
+                "contract_address": "0xbb23b7ACdE2B3A2E6446B16Cd3Dd471b0d80342c",  # DEUSD CDP Vault
+                "token_address": "0x09d484B738dD85CE3953102453E91507982121d0",  # DAI
+                "name": "Loop DEUSD CDP Balance",
+                "description": "DEUSD balance in CDP Vault",
+            }
+        ],
         "usd_cdp_vault": {
             "name": "DEUSD CDP Vault",
             "address": "0xbb23b7ACdE2B3A2E6446B16Cd3Dd471b0d80342c",
@@ -218,6 +240,14 @@ CONTRACTS = {
     },
     "BNB": {
         "chain_id": "56",
+        "balances": [
+            {
+                "contract_address": "0x03C07e6d561b664246058974dB31dbF1c1C0B416",  # clisBNB CDP Vault
+                "token_address": "0x1d9d27f0b89181cf1593ac2b36a37b444eb66bee",  # WBNB
+                "name": "clisBNB CDP Balance",
+                "description": "clisBNB balance in CDP Vault",
+            }
+        ],
         "bnb_cdp_vault": {
             "name": "clisBNB CDP Vault",
             "address": "0x03C07e6d561b664246058974dB31dbF1c1C0B416",
