@@ -8,9 +8,21 @@ import os
 CONTRACTS = {
     "ETH": {
         "chain_id": "1",
-        "eth_cdp_vault": {
-            "name": "Spectra CDP Vault",
+        "eth_yneth_cdp_vault": {
+            "name": "Spectra yneth CDP Vault",
             "address": "0x9BfCD3788f923186705259ae70A1192F601BeB47",
+            "abi_file": "eth/cdp_vault_spectra.json",
+            "functions_to_track": [
+                {
+                    "name": "spotPrice",
+                    "params": [],
+                    "column_names": ["spot_price"],
+                },
+            ],
+        },
+        "eth_ynethx_cdp_vault": {
+            "name": "Spectra ynethx CDP Vault",
+            "address": "0x9c5EE26b9623cA864693C575a8fBc8933ae964E7",
             "abi_file": "eth/cdp_vault_spectra.json",
             "functions_to_track": [
                 {

@@ -40,9 +40,14 @@ CONTRACTS = {
             "description": "slpETH supply data",
         },
         {
-            "file": "eth_cdp_vault.csv",
-            "name": "Loop ETH CDP Vault",
-            "description": "Loop ETH CDP Vault data",
+            "file": "eth_yneth_cdp_vault.csv",
+            "name": "Loop ynETH CDP Vault",
+            "description": "Loop ynETH CDP Vault data",
+        },
+        {
+            "file": "eth_ynethx_cdp_vault.csv",
+            "name": "Loop ynETHx CDP Vault",
+            "description": "Loop ynETHx CDP Vault data",
         },
     ],
     "USD": [
