@@ -149,7 +149,10 @@ class BlockchainDataCollector:
         )
         print(f"{Fore.CYAN}{'=' * 50}{Style.RESET_ALL}")
 
-        for contract_name in contracts:
+        # Handle regular contracts
+        for contract_name in self.contracts:
+            if contract_name in ["chain_id", "balances"]:
+                continue
             try:
                 contract_config = self.contracts[contract_name]
                 contract_address = contract_config["address"]
@@ -175,6 +178,21 @@ class BlockchainDataCollector:
                     f"{Fore.RED}Error checking creation block for {contract_name}: {e}{Style.RESET_ALL}"
                 )
                 continue
+
+        # Handle balances contracts
+        if "balances" in self.contracts:
+            for balance_config in self.contracts["balances"]:
+                contract_name = balance_config["name"].lower().replace(" ", "_")
+                try:
+                    creation_block = self.get_contract_creation_block(
+                        balance_config["contract_address"]
+                    )
+                    creation_blocks[contract_name] = creation_block
+                except Exception as e:
+                    print(
+                        f"{Fore.RED}Error getting creation block for {contract_name}: {e}{Style.RESET_ALL}"
+                    )
+                    continue
 
         print(f"\n{Fore.CYAN}Creation block summary:{Style.RESET_ALL}")
         for contract_name, block in creation_blocks.items():
@@ -433,8 +451,9 @@ class BlockchainDataCollector:
 
         # Get contract creation blocks
         creation_blocks = {}
+        # Handle regular contracts
         for contract_name in self.contracts:
-            if contract_name == "chain_id":
+            if contract_name in ["chain_id", "balances"]:
                 continue
             try:
                 creation_block = self.get_contract_creation_block(
@@ -447,21 +466,123 @@ class BlockchainDataCollector:
                 )
                 continue
 
+        # Handle balances contracts
+        if "balances" in self.contracts:
+            for balance_config in self.contracts["balances"]:
+                contract_name = balance_config["name"].lower().replace(" ", "_")
+                try:
+                    creation_block = self.get_contract_creation_block(
+                        balance_config["contract_address"]
+                    )
+                    creation_blocks[contract_name] = creation_block
+                except Exception as e:
+                    print(
+                        f"{Fore.RED}Error getting creation block for {contract_name}: {e}{Style.RESET_ALL}"
+                    )
+                    continue
+
         # Collect data for each contract
         results = {}
-        contracts = list(creation_blocks.keys())
+
+        # First handle regular contracts
+        contracts = [
+            c for c in self.contracts.keys() if c not in ["chain_id", "balances"]
+        ]
         max_workers = min(len(self.rpc_urls), len(contracts))
 
         print(
-            f"{Fore.CYAN}Collecting data for {len(contracts)} contracts with {max_workers} workers{Style.RESET_ALL}"
+            f"{Fore.CYAN}Collecting data for {len(contracts)} regular contracts with {max_workers} workers{Style.RESET_ALL}"
         )
 
-        with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            futures = []
-            for contract_name in contracts:
-                creation_block = creation_blocks[contract_name]
+        if len(contracts) > 0:
+            with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                futures = []
+                for contract_name in contracts:
+                    creation_block = creation_blocks.get(contract_name)
+                    if not creation_block:
+                        continue
 
-                # Check if CSV file exists and get the latest block number
+                    # Check if CSV file exists and get the latest block number
+                    csv_path = os.path.join(self.data_dir, f"{contract_name}.csv")
+                    start_block = creation_block
+
+                    if os.path.exists(csv_path):
+                        try:
+                            existing_df = pd.read_csv(csv_path)
+                            if (
+                                not existing_df.empty
+                                and "block_number" in existing_df.columns
+                            ):
+                                latest_block = existing_df["block_number"].max()
+                                if latest_block < end_block - 3500:
+                                    start_block = latest_block + 1
+                                    print(
+                                        f"{Fore.GREEN}Resuming collection for {contract_name} from block {start_block}{Style.RESET_ALL}"
+                                    )
+                                else:
+                                    print(
+                                        f"{Fore.YELLOW}Data for {contract_name} is already up to date{Style.RESET_ALL}"
+                                    )
+                                    results[contract_name] = existing_df
+                                    continue
+                        except Exception as e:
+                            print(
+                                f"{Fore.RED}Error reading existing CSV for {contract_name}: {e}{Style.RESET_ALL}"
+                            )
+
+                    if start_block >= end_block:
+                        print(
+                            f"{Fore.YELLOW}No new blocks to collect for {contract_name}{Style.RESET_ALL}"
+                        )
+                        if os.path.exists(csv_path):
+                            results[contract_name] = pd.read_csv(csv_path)
+                        continue
+
+                    futures.append(
+                        executor.submit(
+                            self.collect_contract_data,
+                            contract_name,
+                            start_block,
+                            end_block,
+                            blocks_period,
+                        )
+                    )
+
+                # Collect results for regular contracts
+                for contract_name, future in zip(contracts, futures):
+                    try:
+                        df = future.result()
+                        if df is not None and not df.empty:
+                            results[contract_name] = df
+                    except Exception as e:
+                        print(
+                            f"{Fore.RED}Error collecting data for {contract_name}: {e}{Style.RESET_ALL}"
+                        )
+
+        # Now handle balance contracts
+        if "balances" in self.contracts:
+            print(f"\n{Fore.CYAN}Collecting balance data...{Style.RESET_ALL}")
+
+            # ERC20 ABI for balanceOf function
+            erc20_abi = [
+                {
+                    "constant": True,
+                    "inputs": [{"name": "_owner", "type": "address"}],
+                    "name": "balanceOf",
+                    "outputs": [{"name": "balance", "type": "uint256"}],
+                    "type": "function",
+                }
+            ]
+
+            # Prepare balance collection tasks
+            balance_tasks = []
+            for balance_config in self.contracts["balances"]:
+                contract_name = balance_config["name"].lower().replace(" ", "_")
+                creation_block = creation_blocks.get(contract_name)
+                if not creation_block:
+                    continue
+
+                # Check existing data
                 csv_path = os.path.join(self.data_dir, f"{contract_name}.csv")
                 start_block = creation_block
 
@@ -476,11 +597,11 @@ class BlockchainDataCollector:
                             if latest_block < end_block:
                                 start_block = latest_block + 1
                                 print(
-                                    f"{Fore.GREEN}Resuming collection for {contract_name} from block {start_block}{Style.RESET_ALL}"
+                                    f"{Fore.GREEN}Resuming balance collection for {contract_name} from block {start_block}{Style.RESET_ALL}"
                                 )
                             else:
                                 print(
-                                    f"{Fore.YELLOW}Data for {contract_name} is already up to date{Style.RESET_ALL}"
+                                    f"{Fore.YELLOW}Balance data for {contract_name} is already up to date{Style.RESET_ALL}"
                                 )
                                 results[contract_name] = existing_df
                                 continue
@@ -488,36 +609,152 @@ class BlockchainDataCollector:
                         print(
                             f"{Fore.RED}Error reading existing CSV for {contract_name}: {e}{Style.RESET_ALL}"
                         )
-                        # Continue with the original start_block if there's an error
 
-                if start_block >= end_block:
-                    print(
-                        f"{Fore.YELLOW}No new blocks to collect for {contract_name}{Style.RESET_ALL}"
-                    )
-                    if os.path.exists(csv_path):
-                        results[contract_name] = pd.read_csv(csv_path)
-                    continue
-
-                futures.append(
-                    executor.submit(
-                        self.collect_contract_data,
-                        contract_name,
-                        start_block,
-                        end_block,
-                        blocks_period,
-                    )
+                balance_tasks.append(
+                    {
+                        "contract_name": contract_name,
+                        "token_address": balance_config["token_address"],
+                        "contract_address": balance_config["contract_address"],
+                        "start_block": start_block,
+                        "end_block": end_block,
+                        "blocks_period": blocks_period or self.blocks_period,
+                        "csv_path": csv_path,
+                    }
                 )
 
-            # Collect results
-            for contract_name, future in zip(contracts, futures):
-                try:
-                    df = future.result()
-                    if df is not None and not df.empty:
-                        results[contract_name] = df
-                except Exception as e:
-                    print(
-                        f"{Fore.RED}Error collecting data for {contract_name}: {e}{Style.RESET_ALL}"
-                    )
+            if balance_tasks:
+                max_workers = min(len(self.rpc_urls), len(balance_tasks))
+                print(
+                    f"{Fore.CYAN}Collecting balance data for {len(balance_tasks)} contracts with {max_workers} workers{Style.RESET_ALL}"
+                )
+
+                def collect_balance_data(task):
+                    try:
+                        # Create Web3 instance with random RPC
+                        w3 = Web3(Web3.HTTPProvider(random.choice(self.rpc_urls)))
+                        if self.chain_id in [56, 97]:
+                            from web3.middleware import geth_poa_middleware
+
+                            w3.middleware_onion.inject(geth_poa_middleware, layer=0)
+
+                        # Create token contract
+                        token_contract = w3.eth.contract(
+                            address=Web3.to_checksum_address(task["token_address"]),
+                            abi=erc20_abi,
+                        )
+
+                        data = []
+                        last_call_time = 0
+
+                        # Create progress bar for blocks
+                        block_range = range(
+                            task["start_block"],
+                            task["end_block"] + 1,
+                            task["blocks_period"],
+                        )
+                        with tqdm(
+                            total=len(block_range),
+                            desc=f"{Fore.BLUE}Processing {task['contract_name']}{Style.RESET_ALL}",
+                            unit="block",
+                            leave=True,
+                        ) as pbar:
+                            for block in block_range:
+                                # Rate limiting
+                                current_time = time.time()
+                                if (
+                                    current_time - last_call_time
+                                    < self.block_retrieval_period
+                                ):
+                                    time.sleep(
+                                        self.block_retrieval_period
+                                        - (current_time - last_call_time)
+                                    )
+                                last_call_time = time.time()
+
+                                try:
+                                    # Get block timestamp first
+                                    block_data = w3.eth.get_block(block)
+                                    timestamp = datetime.fromtimestamp(
+                                        block_data["timestamp"]
+                                    )
+
+                                    # Update progress bar description
+                                    pbar.set_description(
+                                        f"{Fore.BLUE}{task['contract_name']} at block {block} ({timestamp}){Style.RESET_ALL}"
+                                    )
+
+                                    # Get balance
+                                    balance = token_contract.functions.balanceOf(
+                                        Web3.to_checksum_address(
+                                            task["contract_address"]
+                                        )
+                                    ).call(block_identifier=block)
+
+                                    data.append(
+                                        {
+                                            "block_number": block,
+                                            "timestamp": timestamp,
+                                            "balance": balance,
+                                        }
+                                    )
+
+                                except Exception as e:
+                                    print(
+                                        f"{Fore.RED}Error at block {block} for {task['contract_name']}: {e}{Style.RESET_ALL}"
+                                    )
+                                    continue
+                                finally:
+                                    pbar.update(1)
+
+                        if data:
+                            df = pd.DataFrame(data)
+
+                            # Handle existing data
+                            if os.path.exists(task["csv_path"]):
+                                existing_df = pd.read_csv(task["csv_path"])
+                                df = (
+                                    pd.concat([existing_df, df])
+                                    .drop_duplicates(subset=["block_number"])
+                                    .sort_values("block_number")
+                                )
+
+                            df.to_csv(task["csv_path"], index=False)
+                            print(
+                                f"{Fore.GREEN}Saved {len(df)} data points for {task['contract_name']} to {task['csv_path']}{Style.RESET_ALL}"
+                            )
+                            return task["contract_name"], df
+                        return task["contract_name"], None
+
+                    except Exception as e:
+                        print(
+                            f"{Fore.RED}Error collecting balance data for {task['contract_name']}: {e}{Style.RESET_ALL}"
+                        )
+                        return task["contract_name"], None
+
+                # Create overall progress bar for balance tasks
+                with tqdm(
+                    total=len(balance_tasks),
+                    desc=f"{Fore.CYAN}Overall balance collection progress{Style.RESET_ALL}",
+                    unit="contract",
+                    leave=True,
+                ) as overall_pbar:
+                    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                        futures = [
+                            executor.submit(collect_balance_data, task)
+                            for task in balance_tasks
+                        ]
+
+                        for future in as_completed(futures):
+                            try:
+                                contract_name, df = future.result()
+                                if df is not None:
+                                    results[contract_name] = df
+                            except Exception as e:
+                                print(
+                                    f"{Fore.RED}Error processing balance task: {e}{Style.RESET_ALL}"
+                                )
+                            finally:
+                                overall_pbar.update(1)
 
         return results
 

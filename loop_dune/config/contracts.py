@@ -1,4 +1,4 @@
-"""Contract configurations for Spectra Protocol."""
+"""Contract configurations for Loop Protocol."""
 
 from typing import Dict, Any
 import json
@@ -12,13 +12,13 @@ CONTRACTS = {
             {
                 "contract_address": "0x9BfCD3788f923186705259ae70A1192F601BeB47",  # yneth CDP Vault
                 "token_address": "0x2408569177553A427dd6956E1717f2fBE1a96F1D",  # WETH
-                "name": "ynETH CDP Balance",
+                "name": "Loop ynETH CDP Balance",
                 "description": "ynETH balance in CDP Vault",
             },
             {
                 "contract_address": "0x9c5EE26b9623cA864693C575a8fBc8933ae964E7",  # ynethx CDP Vault
                 "token_address": "0xbc48c48789031a130f957c59e07b7f987aa642de",  # WETH
-                "name": "ynETHx CDP Vault WETH Balance",
+                "name": "Loop ynETHx CDP Balance",
                 "description": "ynETHx balance in CDP Vault",
             },
         ],
@@ -244,7 +244,7 @@ CONTRACTS = {
             {
                 "contract_address": "0x03C07e6d561b664246058974dB31dbF1c1C0B416",  # clisBNB CDP Vault
                 "token_address": "0x1d9d27f0b89181cf1593ac2b36a37b444eb66bee",  # WBNB
-                "name": "clisBNB CDP Balance",
+                "name": "Loop clisBNB CDP Balance",
                 "description": "clisBNB balance in CDP Vault",
             }
         ],
@@ -366,6 +366,7 @@ def load_abi(contract_name: str, asset: str) -> Dict:
 # Load ABIs at module import time
 for asset in ["ETH", "USD", "BNB"]:
     for contract_name in CONTRACTS[asset]:
-        if contract_name == "chain_id":
+        if contract_name == "chain_id" or contract_name == "balances":
             continue
+
         CONTRACTS[asset][contract_name]["abi"] = load_abi(contract_name, asset)

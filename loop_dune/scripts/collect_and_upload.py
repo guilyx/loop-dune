@@ -84,12 +84,16 @@ def collect_token_balance(
     return balances
 
 
-def collect_balances_for_asset(asset: str) -> bool:
+def collect_balances_for_asset(
+    asset: str, web3: Web3, creation_blocks: Dict[str, int]
+) -> bool:
     """
     Collect token balances for a specific asset.
 
     Args:
         asset: Asset to collect balances for
+        web3: Web3 instance to use
+        creation_blocks: Dictionary of contract names to creation blocks
 
     Returns:
         True if successful, False otherwise
@@ -106,6 +110,13 @@ def collect_balances_for_asset(asset: str) -> bool:
 
     for balance_config in balances_config:
         try:
+            contract_name = balance_config["name"].lower().replace(" ", "_")
+
+            # Get creation block or use last block period if not found
+            start_block = creation_blocks.get(
+                contract_name, web3.eth.block_number - BLOCK_PERIODS[asset]
+            )
+
             # Get current block
             current_block = web3.eth.block_number
 
@@ -114,13 +125,13 @@ def collect_balances_for_asset(asset: str) -> bool:
                 web3,
                 balance_config["token_address"],
                 balance_config["contract_address"],
-                current_block - BLOCK_PERIODS[asset],  # Start from last block period
+                start_block,
                 current_block,
                 BLOCK_PERIODS[asset],
             )
 
             # Save to CSV
-            output_file = f"data/{asset.lower()}_{balance_config['name'].lower().replace(' ', '_')}.csv"
+            output_file = f"data/{asset.lower()}_{contract_name}.csv"
             os.makedirs("data", exist_ok=True)
 
             with open(output_file, "w") as f:
@@ -166,6 +177,16 @@ CONTRACTS = {
             "name": "Loop ynETHx CDP Vault",
             "description": "Loop ynETHx CDP Vault data",
         },
+        {
+            "file": "loop_yneth_cdp_balance.csv",
+            "name": "Loop ynETH CDP Balance",
+            "description": "ynETH balance in CDP Vault",
+        },
+        {
+            "file": "loop_ynethx_cdp_balance.csv",
+            "name": "Loop ynETHx CDP Balance",
+            "description": "ynETHx balance in CDP Vault",
+        },
     ],
     "USD": [
         {
@@ -183,6 +204,11 @@ CONTRACTS = {
             "name": "Loop USD CDP Vault",
             "description": "Loop USD CDP Vault data",
         },
+        {
+            "file": "loop_deusd_cdp_balance.csv",
+            "name": "Loop DEUSD CDP Balance",
+            "description": "DEUSD balance in CDP Vault",
+        },
     ],
     "BNB": [
         {
@@ -199,6 +225,11 @@ CONTRACTS = {
             "file": "bnb_cdp_vault.csv",
             "name": "Loop BNB CDP Vault",
             "description": "Loop BNB CDP Vault data",
+        },
+        {
+            "file": "loop_clisbnb_cdp_balance.csv",
+            "name": "Loop clisBNB CDP Balance",
+            "description": "clisBNB balance in CDP Vault",
         },
     ],
 }
@@ -344,24 +375,16 @@ def run_collection_and_upload():
         collect_success = collect_data_for_asset(asset)
 
         if collect_success:
-            # Collect balances
-            balance_success = collect_balances_for_asset(asset)
+            # Upload data
+            upload_success = upload_data_for_asset(asset)
 
-            if balance_success:
-                # Upload data
-                upload_success = upload_data_for_asset(asset)
-
-                if upload_success:
-                    print(
-                        f"{Fore.GREEN}Successfully collected and uploaded data for {asset}{Style.RESET_ALL}"
-                    )
-                else:
-                    print(
-                        f"{Fore.RED}Failed to upload data for {asset}{Style.RESET_ALL}"
-                    )
+            if upload_success:
+                print(
+                    f"{Fore.GREEN}Successfully collected and uploaded data for {asset}{Style.RESET_ALL}"
+                )
             else:
                 print(
-                    f"{Fore.RED}Failed to collect balances for {asset}{Style.RESET_ALL}"
+                    f"{Fore.RED}Failed to upload data for {asset}{Style.RESET_ALL}"
                 )
         else:
             print(
