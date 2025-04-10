@@ -1,3 +1,5 @@
+[![Tests](https://github.com/guilyx/loop-dune/actions/workflows/test.yml/badge.svg)](https://github.com/guilyx/loop-dune/actions/workflows/test.yml)
+
 # Loop Dune
 
 A Python package for collecting and uploading blockchain data to Dune Analytics.
