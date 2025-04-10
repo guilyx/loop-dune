@@ -21,6 +21,12 @@ CONTRACTS = {
                 "name": "Loop ynETHx CDP Balance",
                 "description": "ynETHx balance in CDP Vault",
             },
+            {
+                "contract_address": "0x3976d71e7DdFBaB9bD120Ec281B7d35fa0F28528",
+                "token_address": "0xa684EAf215ad323452e2B2bF6F817d4aa5C116ab",
+                "name": "Loop lpETH SLP Balance",
+                "description": "lpETH balance in SLP contract"  # yneth CDP Vault
+            },
         ],
         "eth_yneth_cdp_vault": {
             "name": "Spectra yneth CDP Vault",
@@ -146,6 +152,12 @@ CONTRACTS = {
                 "token_address": "0x09d484B738dD85CE3953102453E91507982121d0",  # DAI
                 "name": "Loop DEUSD CDP Balance",
                 "description": "DEUSD balance in CDP Vault",
+            },
+            {
+                "contract_address": "0xBFB53910C935E837C74e6C4EF584557352d20fDe",
+                "token_address": "0x0eecBDbF7331B8a50FCd0Bf2C267Bf47BD876054",
+                "name": "Loop lpUSD SLP Balance",
+                "description": "lpUSD balance in SLP contract"  # yneth CDP Vault
             }
         ],
         "usd_cdp_vault": {
@@ -246,6 +258,12 @@ CONTRACTS = {
                 "token_address": "0x1d9d27f0b89181cf1593ac2b36a37b444eb66bee",  # WBNB
                 "name": "Loop clisBNB CDP Balance",
                 "description": "clisBNB balance in CDP Vault",
+            },
+            {
+                "contract_address": "0x76a173580ac0456fd208a593722998d6b5b7063d",
+                "token_address": "0xed166436559fd3d7f44cb00cacda96eb999d789e",
+                "name": "Loop lpBNB SLP Balance",
+                "description": "lpBNB balance in SLP contract"  # yneth CDP Vault
             }
         ],
         "bnb_cdp_vault": {

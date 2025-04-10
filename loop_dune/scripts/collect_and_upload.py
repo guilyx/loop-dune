@@ -187,6 +187,11 @@ CONTRACTS = {
             "name": "Loop ynETHx CDP Balance",
             "description": "ynETHx balance in CDP Vault",
         },
+        {
+            "file": "loop_lpeth_slp_balance.csv",
+            "name": "Loop lpETH SLP Balance",
+            "description": "lpETH balance in SLP contract",
+        }
     ],
     "USD": [
         {
@@ -209,6 +214,11 @@ CONTRACTS = {
             "name": "Loop DEUSD CDP Balance",
             "description": "DEUSD balance in CDP Vault",
         },
+        {
+            "file": "loop_lpusd_slp_balance.csv",
+            "name": "Loop lpUSD SLP Balance",
+            "description": "lpUSD balance in SLP contract",
+        },
     ],
     "BNB": [
         {
@@ -230,6 +240,11 @@ CONTRACTS = {
             "file": "loop_clisbnb_cdp_balance.csv",
             "name": "Loop clisBNB CDP Balance",
             "description": "clisBNB balance in CDP Vault",
+        },
+        {
+            "file": "loop_lpbnb_slp_balance.csv",
+            "name": "Loop lpBNB SLP Balance",
+            "description": "lpBNB balance in SLP contract",
         },
     ],
 }
