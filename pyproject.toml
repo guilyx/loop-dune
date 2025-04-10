@@ -27,6 +27,7 @@ schedule = "^1.2.1"
 web3 = "^6.15.1"
 setuptools = "^78.1.0"
 croniter = "^2.0.3"
+lark = "^1.2.2"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.0.0"
