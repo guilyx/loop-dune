@@ -12,6 +12,7 @@ A Python package for collecting and uploading blockchain data to Dune Analytics.
   - BNB: 14000 blocks
 - Incremental data collection (resumes from last collected block)
 - Parallel data collection for multiple contracts
+- Token balance tracking for contracts
 - Automatic data upload to Dune Analytics
 - Cron-based scheduling support
 
@@ -52,11 +53,21 @@ DATA_DIR=data  # Directory to store CSV files
 CONTRACTS = {
     "ETH": {
         "chain_id": 1,
+        # Regular contract tracking
         "contract_name": {
             "address": "0x...",
             "abi": [...],
             "functions_to_track": [...]
-        }
+        },
+        # Token balance tracking
+        "balances": [
+            {
+                "contract_address": "0x...",  # Contract to check balance for
+                "token_address": "0x...",     # Token contract address
+                "name": "Contract Token Balance",
+                "description": "Token balance in contract"
+            }
+        ]
     },
     "BNB": {
         "chain_id": 56,
@@ -100,6 +111,9 @@ poetry run loop-upload -f data/lp_eth_pool.csv -n "Loop ETH Lending Market" -d "
 
 # Upload ETH supply data
 poetry run loop-upload -f data/slp_eth.csv -n "slpETH supply data" -d "slpETH supply data"
+
+# Upload token balance data
+poetry run loop-upload -f data/eth_contract_token_balance.csv -n "Contract Token Balance" -d "Token balance in contract"
 ```
 
 ### Automated Collection and Upload
@@ -124,15 +138,22 @@ Collecting data for ETH
 Running command: poetry run loop-collect --asset ETH --blocks-period 3500
 
 ==================================================
+Collecting balances for ETH
+==================================================
+Processing Contract Token Balance: 150/500 blocks [=====>   ] 30%
+Successfully collected balances for Contract Token Balance
+
+==================================================
 Uploading data for ETH
 ==================================================
 Running: Upload lp_eth_pool.csv for ETH
 Command: poetry run loop-upload -f data/lp_eth_pool.csv -n "Loop ETH Lending Market" -d "Loop ETH Lending Market data"
 Command completed successfully
 
-Running: Upload slp_eth.csv for ETH
-Command: poetry run loop-upload -f data/slp_eth.csv -n "slpETH supply data" -d "slpETH supply data"
+Running: Upload eth_contract_token_balance.csv for ETH
+Command: poetry run loop-upload -f data/eth_contract_token_balance.csv -n "Contract Token Balance" -d "Token balance in contract"
 Command completed successfully
+
 Successfully collected and uploaded data for ETH
 Waiting 5 seconds before processing next asset...
 
@@ -147,6 +168,7 @@ Script completed at 2024-02-20 15:30:00
 The script shows:
 - Section headers for each asset
 - Command execution status
+- Balance collection progress
 - Upload status for each file
 - Success/failure messages
 - Timestamps for completion
