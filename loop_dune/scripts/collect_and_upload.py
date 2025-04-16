@@ -25,7 +25,7 @@ ASSETS = ["ETH", "USD", "BNB"]
 BLOCK_PERIODS = {
     "ETH": 3500,
     "USD": 3500,
-    "BNB": 14000,
+    "BNB": 12000,
 }
 
 # ERC20 ABI for balanceOf function
