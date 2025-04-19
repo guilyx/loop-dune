@@ -23,8 +23,8 @@ ASSETS = ["ETH", "USD", "BNB"]
 
 # Block periods for each asset
 BLOCK_PERIODS = {
-    "ETH": 3500,
-    "USD": 3500,
+    "ETH": 2000,
+    "USD": 2000,
     "BNB": 12000,
 }
 
@@ -191,7 +191,47 @@ CONTRACTS = {
             "file": "loop_lpeth_slp_balance.csv",
             "name": "Loop lpETH SLP Balance",
             "description": "lpETH balance in SLP contract",
-        }
+        },
+        {
+            "file": "pendle_unieth_cdp_vault.csv",
+            "name": "Pendle UniETH CDP Vault",
+            "description": "Pendle UniETH CDP Vault data",
+        },
+        {
+            "file": "pendle_teth_cdp_vault.csv",
+            "name": "Pendle tETH CDP Vault",
+            "description": "Pendle tETH CDP Vault data",
+        },
+        {
+            "file": "pendle_rsweth_cdp_vault.csv",
+            "name": "Pendle rswETH CDP Vault",
+            "description": "Pendle rswETH CDP Vault data",
+        },
+        {
+            "file": "pendle_puffeth_cdp_vault.csv",
+            "name": "Pendle puffETH CDP Vault",
+            "description": "Pendle puffETH CDP Vault data",
+        },
+        {
+            "file": "loop_pendle_unieth_cdp_balance.csv",
+            "name": "Loop Pendle UniETH CDP Balance",
+            "description": "Pendle UniETH balance in CDP Vault",
+        },
+        {
+            "file": "loop_pendle_teth_cdp_balance.csv",
+            "name": "Loop Pendle tETH CDP Balance",
+            "description": "Pendle tETH balance in CDP Vault",
+        },
+        {
+            "file": "loop_pendle_rsweth_cdp_balance.csv",
+            "name": "Loop Pendle rswETH CDP Balance",
+            "description": "Pendle rswETH balance in CDP Vault",
+        },
+        {
+            "file": "loop_pendle_puffeth_cdp_balance.csv",
+            "name": "Loop Pendle puffETH CDP Balance",
+            "description": "Pendle puffETH balance in CDP Vault",
+        },
     ],
     "USD": [
         {

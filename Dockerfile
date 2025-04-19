@@ -35,8 +35,13 @@ RUN poetry config virtualenvs.create false
 COPY . .
 
 # Install dependencies and the project itself with scripts
-RUN poetry install --no-interaction --no-ansi && \
-    poetry run pip install -e .
+RUN poetry install --no-interaction --no-ansi --with scripts && \
+    poetry run pip install -e . && \
+    # Create symbolic links for the scripts
+    ln -s /app/loop_dune/collector.py /usr/local/bin/loop-collect && \
+    ln -s /app/loop_dune/dune_uploader.py /usr/local/bin/loop-upload && \
+    ln -s /app/loop_dune/dashboard.py /usr/local/bin/loop-dashboard && \
+    ln -s /app/loop_dune/sync.py /usr/local/bin/loop-sync
 
 # Set environment variables
 ENV PYTHONPATH=/app
