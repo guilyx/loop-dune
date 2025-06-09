@@ -19,13 +19,14 @@ from colorama import Fore, Style, init
 init()
 
 # Asset configurations
-ASSETS = ["ETH", "USD", "BNB"]
+ASSETS = ["BTC"]
 
 # Block periods for each asset
 BLOCK_PERIODS = {
     "ETH": 2000,
     "USD": 2000,
     "BNB": 12000,
+    "BTC": 12000,
 }
 
 # ERC20 ABI for balanceOf function
@@ -258,6 +259,33 @@ CONTRACTS = {
             "file": "loop_lpusd_slp_balance.csv",
             "name": "Loop lpUSD SLP Balance",
             "description": "lpUSD balance in SLP contract",
+        },
+    ],
+    "BTC": [
+        {
+            "file": "lp_btc_pool.csv",
+            "name": "Loop BTC Lending Market",
+            "description": "Loop BTC Lending Market data",
+        },
+        {
+            "file": "slp_btc.csv",
+            "name": "slpBTC supply data",
+            "description": "slpBTC supply data",
+        },
+        {
+            "file": "btc_cdp_vault.csv",
+            "name": "Loop BTC CDP Vault",
+            "description": "Loop BTC CDP Vault data",
+        },
+        {
+            "file": "loop_yncobtck_cdp_balance.csv",
+            "name": "Loop ynCoBTCk CDP Balance",
+            "description": "ynCoBTCk balance in CDP Vault",
+        },
+        {
+            "file": "loop_lpbtc_slp_balance.csv",
+            "name": "Loop lpBTC SLP Balance",
+            "description": "lpBTC balance in SLP contract",
         },
     ],
     "BNB": [

@@ -32,8 +32,8 @@ class DuneSync:
             asset: Asset type to sync (ETH, USD, or BNB)
             namespace: Dune namespace for tables
         """
-        if asset not in ["ETH", "USD", "BNB"]:
-            raise ValueError("Asset must be either 'ETH', 'USD', or 'BNB'")
+        if asset not in ["ETH", "USD", "BNB", "BTC"]:
+            raise ValueError("Asset must be either 'ETH', 'USD', 'BTC' or 'BNB'")
 
         self.asset = asset
         self.namespace = namespace
@@ -326,7 +326,7 @@ def main():
     )
     parser.add_argument(
         "--asset",
-        choices=["ETH", "USD", "BNB"],
+        choices=["ETH", "USD", "BNB", "BTC"],
         default="ETH",
         help="Asset to sync data for (default: ETH)",
     )

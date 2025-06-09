@@ -322,6 +322,112 @@ CONTRACTS = {
             ],
         },
     },
+    "BTC": {
+        "chain_id": "56",
+        "balances": [
+            {
+                "contract_address": "0xF0F67671151FF8B9F2117BD3ac7406D9D3ee8f45",  # ynBTC CDP Vault
+                "token_address": "0x132376b153d3cFf94615fe25712DB12CaAADf547",  # ynBTC
+                "name": "Loop ynCoBTCk CDP Balance",
+                "description": "ynCoBTCk balance in CDP Vault",
+            },
+            {
+                "contract_address": "0x72a1AB567020CBbE1C7c21140E2611A6cb49a960",
+                "token_address": "0xa02fcc8493856b5bd7fA5099f5a631A6cb77fBd1",
+                "name": "Loop lpBTC SLP Balance",
+                "description": "lpBTC balance in SLP contract",  # yneth CDP Vault
+            },
+        ],
+        "btc_cdp_vault": {
+            "name": "ynCoBTCk CDP Vault",
+            "address": "0xF0F67671151FF8B9F2117BD3ac7406D9D3ee8f45",
+            "abi_file": "eth/cdp_vault_spectra.json",  # Same ABI as ETH CDP
+            "functions_to_track": [
+                {
+                    "name": "spotPrice",
+                    "params": [],
+                    "column_names": ["spot_price"],
+                },
+            ],
+        },
+        "lp_btc_pool": {
+            "name": "LP-BTC Pool",
+            "address": "0xa02fcc8493856b5bd7fA5099f5a631A6cb77fBd1",
+            "abi_file": "eth/lpeth.json",  # Same ABI as ETH pool
+            "functions_to_track": [
+                {
+                    "name": "totalBorrowed",
+                    "params": [],
+                    "column_names": ["total_borrowed"],
+                },
+                {
+                    "name": "baseInterestRate",
+                    "params": [],
+                    "column_names": ["base_interest_rate"],
+                },
+                {
+                    "name": "supplyRate",
+                    "params": [],
+                    "column_names": ["supply_rate"],
+                },
+                {
+                    "name": "availableLiquidity",
+                    "params": [],
+                    "column_names": ["available_liquidity"],
+                },
+                {
+                    "name": "expectedLiquidity",
+                    "params": [],
+                    "column_names": ["expected_liquidity"],
+                },
+                {
+                    "name": "totalSupply",
+                    "params": [],
+                    "column_names": ["total_supply"],
+                },
+                {
+                    "name": "balanceOf",
+                    "params": [
+                        "0x7B4231155489560731677bD108c4972B712ba528"
+                    ],  # Locked LP-USD contract address
+                    "column_names": ["locked_lp_usd_balance"],
+                },
+                {
+                    "name": "creditManagerBorrowed",
+                    "params": [
+                        "0xF0F67671151FF8B9F2117BD3ac7406D9D3ee8f45"  # deusdCDP address
+                    ],
+                    "column_names": ["credit_manager_borrowed"],
+                },
+                {
+                    "name": "creditManagerDebtLimit",
+                    "params": [
+                        "0xF0F67671151FF8B9F2117BD3ac7406D9D3ee8f45"  # deusdCDP address
+                    ],
+                    "column_names": ["credit_manager_debt_limit"],
+                },
+                {
+                    "name": "creditManagerBorrowable",
+                    "params": [
+                        "0xF0F67671151FF8B9F2117BD3ac7406D9D3ee8f45"  # deusdCDP address
+                    ],
+                    "column_names": ["credit_manager_borrowable"],
+                },
+            ],
+        },
+        "slp_btc": {
+            "name": "SLP-BTC",
+            "address": "0x72a1AB567020CBbE1C7c21140E2611A6cb49a960",
+            "abi_file": "eth/staked_lpeth.json",  # Same ABI as SLP-ETH
+            "functions_to_track": [
+                {
+                    "name": "totalSupply",
+                    "params": [],
+                    "column_names": ["total_supply"],
+                },
+            ],
+        },
+    },
     "BNB": {
         "chain_id": "56",
         "balances": [
@@ -454,7 +560,7 @@ def load_abi(contract_name: str, asset: str) -> Dict:
 
 
 # Load ABIs at module import time
-for asset in ["ETH", "USD", "BNB"]:
+for asset in ["ETH", "USD", "BNB", "BTC"]:
     for contract_name in CONTRACTS[asset]:
         if contract_name == "chain_id" or contract_name == "balances":
             continue

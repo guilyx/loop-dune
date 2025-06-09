@@ -33,7 +33,7 @@ class BlockchainDataCollector:
         Args:
             asset: Asset type to collect data for (ETH, USD, or BNB)
         """
-        if asset not in ["ETH", "USD", "BNB"]:
+        if asset not in ["ETH", "USD", "BNB", "BTC"]:
             raise ValueError("Asset must be either 'ETH', 'USD', or 'BNB")
 
         self.asset = asset
@@ -43,8 +43,8 @@ class BlockchainDataCollector:
         )  # Default to Ethereum mainnet (1)
 
         # Initialize Web3 with multiple RPC URLs
-        if asset == "BNB":
-            rpc_urls = os.getenv(f"{asset}_RPC_URLS", "").split(",")
+        if asset in ["BNB", "BTC"]:
+            rpc_urls = os.getenv(f"BNB_RPC_URLS", "").split(",")
             if not rpc_urls or not rpc_urls[0]:
                 raise ValueError(f"{asset}_RPC_URLS environment variable not set")
         else:
@@ -767,9 +767,9 @@ def main():
     parser.add_argument(
         "--asset",
         type=str,
-        choices=["ETH", "USD", "BNB"],
+        choices=["ETH", "USD", "BNB", "BTC"],
         required=True,
-        help="Asset to collect data for (ETH, USD, or BNB)",
+        help="Asset to collect data for (ETH, USD, BTC or BNB)",
     )
     parser.add_argument(
         "--end-block",
