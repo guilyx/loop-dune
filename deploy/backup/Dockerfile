@@ -16,5 +16,5 @@ ENV BACKUP_DIR=/backups \
     TZ=UTC
 VOLUME ["/backups"]
 USER postgres
-HEALTHCHECK --interval=1h --timeout=30s --start-period=5m CMD ["healthcheck.sh"]
+HEALTHCHECK --interval=1h --timeout=30s --start-period=5m --start-interval=10s CMD ["healthcheck.sh"]
 ENTRYPOINT ["scheduler.sh"]

@@ -12,6 +12,7 @@ export SCRIPT=backup
 # shellcheck source=lib.sh
 source "$(dirname "$(readlink -f "$0")")/lib.sh"
 
+DIE_PING_URL="$BACKUP_HEARTBEAT_URL"
 require_db
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT

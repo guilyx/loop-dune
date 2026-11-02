@@ -49,12 +49,12 @@ src=$(counts "$DB_URL"); got=$(counts "$target")
 [[ "$src" == "$got" ]] || fail "row counts differ: source $src, restored $got"
 log "restored counts match: $got (snapshots/observations)"
 
-log "3/6 restore is idempotent (second restore replaces, does not duplicate)"
-RESTORE_DATABASE_URL="$target" "$here/restore.sh" "$name"
+log "3/6 restore is idempotent (second restore replaces, does not duplicate); key from stdin"
+BACKUP_AGE_IDENTITY=- RESTORE_DATABASE_URL="$target" "$here/restore.sh" "$name" < "$tmp/key.txt"
 [[ "$(counts "$target")" == "$src" ]] || fail "second restore changed the counts"
 
-log "4/6 restore drill"
-"$here/verify.sh" "$name"
+log "4/6 restore drill (newest backup, must be under 1h old)"
+VERIFY_MAX_AGE_HOURS=1 "$here/verify.sh"
 
 log "5/6 tampered backup is rejected"
 printf 'x' >> "$tmp/offsite/daily/$name"

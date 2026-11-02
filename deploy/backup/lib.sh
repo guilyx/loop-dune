@@ -22,7 +22,13 @@ if [[ -z "${RCLONE_CONFIG:-}" ]]; then
 fi
 
 log() { printf '%s [%s] %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "${SCRIPT:-backup}" "$*" >&2; }
-die() { log "ERROR: $*"; exit 1; }
+# A script that reports to a heartbeat sets DIE_PING_URL (not exported) so a deliberate
+# failure is reported as loudly as an unexpected one (the ERR trap).
+die() {
+  log "ERROR: $*"
+  [[ -z "${DIE_PING_URL:-}" ]] || ping "$DIE_PING_URL" fail "$*"
+  exit 1
+}
 
 require_db() { [[ -n "$DB_URL" ]] || die "set BACKUP_DATABASE_URL (or DATABASE_URL)"; }
 

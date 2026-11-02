@@ -32,7 +32,11 @@ date -u +%s > /tmp/scheduler-started
 run_once() {
   "$here/backup.sh" || log "backup failed (will retry at the next slot)"
   if [[ "$VERIFY_WEEKDAY" != never && "$(date -u +%w)" == "$VERIFY_WEEKDAY" ]]; then
-    "$here/verify.sh" || log "restore drill failed"
+    if [[ -n "$BACKUP_AGE_RECIPIENTS" && -z "${BACKUP_AGE_IDENTITY:-}" ]]; then
+      log "restore drill skipped: backups are encrypted and the private key is not on this host (run it from CI: restore-drill workflow)"
+    else
+      "$here/verify.sh" || log "restore drill failed"
+    fi
   fi
 }
 

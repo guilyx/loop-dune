@@ -4,7 +4,9 @@
 #   restore.sh [NAME|latest] [--target URL] [--yes]
 #
 # NAME is a backup file name (from the local volume or the offsite remote); default
-# "latest". Encrypted backups need the age private key: BACKUP_AGE_IDENTITY=/path/key.
+# "latest". Encrypted backups need the age private key: BACKUP_AGE_IDENTITY=/path/key,
+# or BACKUP_AGE_IDENTITY=- to read it from stdin (it then never touches the disk
+# outside this run's temporary directory).
 # The restore is a single transaction (--clean --if-exists): it either replaces the
 # `loop` objects completely or changes nothing.
 set -Eeuo pipefail
@@ -19,7 +21,7 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --target) target="$2"; shift 2 ;;
     --yes) confirm=yes; shift ;;
-    -h|--help) sed -n '2,9p' "$0"; exit 0 ;;
+    -h|--help) sed -n '2,11p' "$0"; exit 0 ;;
     *) name="$1"; shift ;;
   esac
 done
@@ -30,6 +32,11 @@ fi
 
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
+identity="${BACKUP_AGE_IDENTITY:-}"
+if [[ "$identity" == - ]]; then
+  (umask 077 && cat > "$work/identity")
+  identity="$work/identity"
+fi
 
 [[ "$name" != latest ]] || name=$(latest_backup auto)
 [[ -n "$name" ]] || die "no backup found locally or offsite"
@@ -57,9 +64,9 @@ log "restoring $name ($found)"
 
 dump="$work/$name"
 if [[ "$name" == *.age ]]; then
-  [[ -n "${BACKUP_AGE_IDENTITY:-}" && -r "${BACKUP_AGE_IDENTITY}" ]] \
-    || die "$name is encrypted: set BACKUP_AGE_IDENTITY to the age private key file"
-  age -d -i "$BACKUP_AGE_IDENTITY" -o "$work/${name%.age}" "$dump"
+  [[ -n "$identity" && -s "$identity" ]] \
+    || die "$name is encrypted: set BACKUP_AGE_IDENTITY to the age private key file (or - for stdin)"
+  age -d -i "$identity" -o "$work/${name%.age}" "$dump"
   dump="$work/${name%.age}"
 fi
 pg_restore --list "$dump" > /dev/null
