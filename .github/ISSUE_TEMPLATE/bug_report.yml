@@ -1,0 +1,35 @@
+name: Bug report
+description: Something in the indexer, dashboard, API or deployment does not work.
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you did, what you expected, and what happened instead.
+    validations: { required: true }
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: How to reproduce
+      placeholder: |
+        1. Run `loop-indexer run --from 2025-01-01 --to 2025-01-02`
+        2. ...
+    validations: { required: true }
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options: [Indexer, Dashboard, HTTP API, Dune export, VPS / deployment, Backups, Docs]
+    validations: { required: true }
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or screenshots
+      description: Remove secrets (RPC keys, database URLs) before pasting.
+      render: shell
+  - type: input
+    id: version
+    attributes:
+      label: Commit or image tag
+      placeholder: e.g. 580badc or ghcr.io/guilyx/loop-dune-indexer:latest

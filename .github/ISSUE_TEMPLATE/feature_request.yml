@@ -1,0 +1,14 @@
+name: Feature request
+description: A new metric, chart, export or deployment option.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What question should this answer?
+      description: The problem or question first; a proposed solution is welcome but optional.
+    validations: { required: true }
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal

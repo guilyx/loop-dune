@@ -1,0 +1,22 @@
+name: Data issue
+description: A number looks wrong, a series is missing, or a contract is not tracked.
+labels: [data]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Every value is read from contract state, so a data issue is usually a registry
+        or decoding problem. Concrete examples make it fast to fix.
+  - type: input
+    id: where
+    attributes:
+      label: Where
+      description: Market, vault or series id, and the page or query you saw it in.
+      placeholder: eth / pendle-teth-jan26 / eth.vault.pendle-teth-jan26.total_debt
+    validations: { required: true }
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected and what you saw
+      description: Include the timestamp (UTC) and, if you can, a block explorer link or the contract call that shows the right value.
+    validations: { required: true }
