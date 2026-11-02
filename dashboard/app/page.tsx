@@ -49,7 +49,8 @@ export default async function Overview() {
           const d = data[m.id];
           const now = d ? latest(d.daily, "tvl") : undefined;
           const top = d ? peak(d.daily) : null;
-          const drawdown = top && now?.tvl != null && top.value > 0 ? 1 - now.tvl / top.value : null;
+          const hasPeak = top !== null && top.value > 0;
+          const drawdown = hasPeak && now?.tvl != null ? 1 - now.tvl / top.value : null;
           return (
             <Link key={m.id} href={`/markets/${m.id}`} className="card market-card">
               <div className="card-title">
@@ -64,9 +65,9 @@ export default async function Overview() {
               <Sparkline label={`${m.name} TVL trend`} points={(d?.daily ?? []).map((p) => ({ day: p.day, value: p.tvl }))} />
               <div className="rows">
                 <span>Peak TVL</span>
-                <span>{top ? `${amount(top.value, m.underlying.symbol)}` : "–"}</span>
+                <span>{hasPeak ? amount(top.value, m.underlying.symbol) : "–"}</span>
                 <span>Peak date</span>
-                <span>{top ? day(top.day) : "–"}</span>
+                <span>{hasPeak ? day(top.day) : "–"}</span>
                 <span>Below peak</span>
                 <span>{percent(drawdown, 1)}</span>
                 <span>Utilization</span>

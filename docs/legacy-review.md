@@ -51,4 +51,4 @@ on-chain) and three ABIs were kept.
 See [architecture.md](architecture.md). In short: a typed, chain-verified registry;
 an hourly UTC grid; Multicall3 snapshots; Postgres as the source of truth; idempotent,
 self-healing runs; at-least-once Dune export via the current Uploads API; a dashboard;
-and 49 indexer tests (90% coverage) running against an in-memory EVM and a real Postgres.
+and 51 indexer tests (91% coverage) running against an in-memory EVM and a real Postgres.

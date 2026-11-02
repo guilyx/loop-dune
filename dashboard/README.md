@@ -18,6 +18,8 @@ npm run dev        # http://localhost:3000
   crosshair tooltip that lists every series, keyboard navigation, a "view as table"
   fallback, and a validated categorical palette in light and dark themes.
 
+![Loop USD market, dark theme](../docs/img/market-usd-dark.png)
+
 Deploy on Vercel with Root Directory `dashboard/` (see `../docs/deployment.md`), or
 self-host with the `Dockerfile` (standalone Next.js server).
 

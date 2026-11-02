@@ -46,7 +46,8 @@ export class PostgresSource implements DataSource {
 
   async meta(): Promise<Meta> {
     const [markets, vaults, series, freshness] = await Promise.all([
-      this.sql<Row[]>`select * from loop.markets order by market_id`,
+      // Registry order (chain, then deployment), so colours match the static snapshot.
+      this.sql<Row[]>`select * from loop.markets order by chain_id, start_block`,
       this.sql<Row[]>`select * from loop.vaults order by market_id, vault_id`,
       this.sql<Row[]>`
         select series_id, market_id, entity_type, entity_id, metric, unit, description,

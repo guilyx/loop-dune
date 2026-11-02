@@ -52,7 +52,7 @@ cp .env.example .env          # add archive RPC URLs
 make setup                    # Python + Node dependencies
 make db migrate               # local Postgres + schema
 make verify                   # check the registry against the chain
-make backfill                 # daily snapshots since deployment (minutes)
+make backfill                 # daily snapshots since deployment (~1.5k points)
 make run                      # fill in hourly resolution
 make export-static dashboard  # http://localhost:3000
 ```
@@ -84,8 +84,9 @@ The indexer surfaced things the protocol's own accounting hid:
   $150k of collateral. Debt peaked at 124k USDC. 4,000 USDC is still outstanding.
 * **10 of 16 vaults were never tracked** by the previous pipeline, including vaults with
   debt. Its BNB pool metrics read an Ethereum address and were always zero.
-* **TVL is down about 92% from its peak** on lpETH (915 → 74 WETH) and about 98% on
-  lpUSD, with high utilization on what remains.
+* **TVL is 92–99% below its peak.** lpETH went from 915 to 77 WETH, lpUSD from 594k to
+  12.9k USDC, and lpBNB from 1,588 to 10 WBNB (2 Nov 2026). lpBTC shows no deposits in
+  any daily sample. What remains on lpETH is still 86% borrowed.
 
 More in [docs/data-model.md](docs/data-model.md#findings-in-the-data). The audit of the
 old pipeline is in [docs/legacy-review.md](docs/legacy-review.md).
