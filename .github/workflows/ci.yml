@@ -43,7 +43,7 @@ jobs:
       - run: uv run ruff format --check src tests
       - run: uv run mypy
       - run: uv run pytest --cov --cov-report=term --cov-report=xml --cov-fail-under=85
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: coverage-xml
           path: indexer/coverage.xml
