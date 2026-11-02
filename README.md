@@ -1,204 +1,113 @@
-[![Tests](https://github.com/guilyx/loop-dune/actions/workflows/test.yml/badge.svg)](https://github.com/guilyx/loop-dune/actions/workflows/test.yml)
-
 # Loop Dune
 
-A Python package for collecting and uploading blockchain data to Dune Analytics.
+[![CI](https://github.com/guilyx/loop-dune/actions/workflows/ci.yml/badge.svg)](https://github.com/guilyx/loop-dune/actions/workflows/ci.yml)
 
-## Features
+On-chain analytics for **Loop Protocol**'s lending markets. Every pool and CDP vault is
+read straight from contract state on an hourly UTC grid since deployment, stored in
+Postgres, published to Dune, and shown on a dashboard.
 
-- Collects data from multiple blockchain networks (Ethereum, BSC)
-- Supports multiple assets (ETH, USD, BNB)
-- Configurable block periods for each asset:
-  - ETH: 3500 blocks
-  - USD: 3500 blocks
-  - BNB: 14000 blocks
-- Incremental data collection (resumes from last collected block)
-- Parallel data collection for multiple contracts
-- Token balance tracking for contracts
-- Automatic data upload to Dune Analytics
-- Cron-based scheduling support
+![Overview](docs/img/overview.png)
 
-## Installation
+| | |
+|---|---|
+| **Markets** | lpETH and lpUSD on Ethereum; lpBNB and lpBTC on BNB Chain |
+| **Coverage** | 4 pools, 4 staking vaults, 16 CDP vaults, 114 series, from each pool's deployment block |
+| **Resolution** | hourly (UTC), with daily rollups |
+| **Outputs** | Postgres views · public Dune tables · Next.js dashboard · JSON/CSV API |
 
-1. Clone the repository:
+> The Loop frontend has been sunset. The contracts are still on-chain, so the data can
+> still be read, audited and charted. See [the findings](#findings).
+
+## How it works
+
+```mermaid
+flowchart LR
+  rpc[(Archive RPC<br/>Ethereum · BNB Chain)] -->|Multicall3, 1 call/hour/chain| idx[loop-indexer]
+  idx -->|idempotent upserts| pg[(Postgres / Supabase)]
+  pg -->|append-only| dune[(Dune tables)]
+  pg --> dash[Dashboard · Vercel]
+```
+
+* **[Registry](indexer/src/loop_indexer/markets.yaml) verified on-chain.** Tokens,
+  decimals, deployment blocks and each pool's vault list are re-checked against the chain
+  (`loop-indexer registry verify`).
+* **One UTC grid for every chain.** "State as of 14:00 UTC" means the last block at or
+  before 14:00 on each chain, so Ethereum and BNB Chain series join row for row.
+* **Exact and honest.** Raw `uint256` is kept alongside scaled values. A reverting call
+  is recorded as missing, never as zero.
+* **Self-healing.** Every run fills every missing hour since deployment. Re-runs are
+  no-ops, and outages repair themselves on the next run.
+
+Details: [architecture](docs/architecture.md) · [data model](docs/data-model.md) ·
+[deployment](docs/deployment.md) · [Dune](dune/README.md).
+
+![Market page](docs/img/market-eth.png)
+
+## Quick start
+
+Requirements: [uv](https://docs.astral.sh/uv/), Node 20+, and Docker (or any Postgres ≥ 14).
+
 ```bash
-git clone https://github.com/yourusername/loop-dune.git
-cd loop-dune
+cp .env.example .env          # add archive RPC URLs
+make setup                    # Python + Node dependencies
+make db migrate               # local Postgres + schema
+make verify                   # check the registry against the chain
+make backfill                 # daily snapshots since deployment (minutes)
+make run                      # fill in hourly resolution
+make export-static dashboard  # http://localhost:3000
 ```
 
-2. Install dependencies using Poetry:
-```bash
-poetry install
+The dashboard also runs with **no database**: `cd dashboard && npm ci && npm run dev`
+serves the committed snapshot in `dashboard/data/`.
+
+## Using the data
+
+| Where | How |
+|---|---|
+| Postgres | `loop.market_hourly`, `loop.vault_hourly`, `loop.market_daily`, … ([data model](docs/data-model.md)) |
+| Dune | `dune.<namespace>.loop_observations` + catalogue tables, and [ready-made queries](dune/queries/) |
+| HTTP | `/api/markets`, `/api/markets/eth`, `/api/markets/eth?format=csv` |
+
+```sql
+-- utilization and supply APR, end of day
+select day, market_id, utilization, supply_apr
+from loop.market_daily
+order by day desc, market_id;
 ```
 
-## Configuration
+## Findings
 
-1. Create a `.env` file in the project root with the following variables:
+The indexer surfaced things the protocol's own accounting hid:
 
-```env
-# RPC URLs (comma-separated)
-ETH_RPC_URLS=https://eth-mainnet.g.alchemy.com/v2/your-api-key,https://eth-mainnet.public.blastapi.io
-BNB_RPC_URLS=https://bsc-dataseed.binance.org,https://bsc-dataseed1.defibit.io
+* **A vault borrowed 120k USDC against dust.** The `syrupUSDC` vault's oracle reports
+  prices scaled 1e30 instead of 1e18. Read as 1e18, 0.000000059 LP tokens look like about
+  $150k of collateral. Debt peaked at 124k USDC. 4,000 USDC is still outstanding.
+* **10 of 16 vaults were never tracked** by the previous pipeline, including vaults with
+  debt. Its BNB pool metrics read an Ethereum address and were always zero.
+* **TVL is down about 92% from its peak** on lpETH (915 → 74 WETH) and about 98% on
+  lpUSD, with high utilization on what remains.
 
-# API Keys
-ETHERSCAN_API_KEY=your-etherscan-api-key
-DUNE_API_KEY=your-dune-api-key
+More in [docs/data-model.md](docs/data-model.md#findings-in-the-data). The audit of the
+old pipeline is in [docs/legacy-review.md](docs/legacy-review.md).
 
-# Collection Settings
-BLOCKS_PERIOD=100  # Default block period (can be overridden per asset)
-BLOCK_RETRIEVAL_PERIOD=60  # Seconds between block retrievals
-DATA_DIR=data  # Directory to store CSV files
+## Repository
+
 ```
-
-2. Configure contracts in `loop_dune/config/contracts.py`:
-```python
-CONTRACTS = {
-    "ETH": {
-        "chain_id": 1,
-        # Regular contract tracking
-        "contract_name": {
-            "address": "0x...",
-            "abi": [...],
-            "functions_to_track": [...]
-        },
-        # Token balance tracking
-        "balances": [
-            {
-                "contract_address": "0x...",  # Contract to check balance for
-                "token_address": "0x...",     # Token contract address
-                "name": "Contract Token Balance",
-                "description": "Token balance in contract"
-            }
-        ]
-    },
-    "BNB": {
-        "chain_id": 56,
-        "contract_name": {
-            "address": "0x...",
-            "abi": [...],
-            "functions_to_track": [...]
-        }
-    }
-}
+indexer/      Python indexer: registry, chain client, pipeline, Postgres, exporters, CLI
+supabase/     SQL migrations: tables, analysis views, read-only role
+dashboard/    Next.js dashboard and JSON/CSV API (Postgres or static snapshot)
+dune/         DuneSQL queries over the exported tables
+docs/         architecture, data model, deployment runbook, legacy review
+.github/      CI (lint, types, tests, builds) and the hourly indexer workflow
 ```
-
-## Usage
-
-### Data Collection
-
-Collect data for a specific asset:
-```bash
-# Collect ETH data
-poetry run loop-collect --asset ETH
-
-# Collect USD data
-poetry run loop-collect --asset USD
-
-# Collect BNB data
-poetry run loop-collect --asset BNB
-
-# Collect with custom block period
-poetry run loop-collect --asset ETH --blocks-period 5000
-
-# Collect up to a specific block
-poetry run loop-collect --asset ETH --end-block 18000000
-```
-
-### Data Upload
-
-Upload collected data to Dune Analytics:
-```bash
-# Upload ETH lending pool data
-poetry run loop-upload -f data/lp_eth_pool.csv -n "Loop ETH Lending Market" -d "Loop ETH Lending Market data"
-
-# Upload ETH supply data
-poetry run loop-upload -f data/slp_eth.csv -n "slpETH supply data" -d "slpETH supply data"
-
-# Upload token balance data
-poetry run loop-upload -f data/eth_contract_token_balance.csv -n "Contract Token Balance" -d "Token balance in contract"
-```
-
-### Automated Collection and Upload
-
-Run the automated collection and upload script:
-```bash
-# Run a single iteration (collects and uploads data once)
-poetry run python loop_dune/scripts/collect_and_upload.py
-
-# Run with cron schedule (every 6 hours)
-poetry run python loop_dune/scripts/collect_and_upload.py --cron "0 */6 * * *"
-
-# Run with fixed interval (every 30 minutes)
-poetry run python loop_dune/scripts/collect_and_upload.py --interval 30
-```
-
-Example output:
-```
-==================================================
-Collecting data for ETH
-==================================================
-Running command: poetry run loop-collect --asset ETH --blocks-period 3500
-
-==================================================
-Collecting balances for ETH
-==================================================
-Processing Contract Token Balance: 150/500 blocks [=====>   ] 30%
-Successfully collected balances for Contract Token Balance
-
-==================================================
-Uploading data for ETH
-==================================================
-Running: Upload lp_eth_pool.csv for ETH
-Command: poetry run loop-upload -f data/lp_eth_pool.csv -n "Loop ETH Lending Market" -d "Loop ETH Lending Market data"
-Command completed successfully
-
-Running: Upload eth_contract_token_balance.csv for ETH
-Command: poetry run loop-upload -f data/eth_contract_token_balance.csv -n "Contract Token Balance" -d "Token balance in contract"
-Command completed successfully
-
-Successfully collected and uploaded data for ETH
-Waiting 5 seconds before processing next asset...
-
-==================================================
-Collecting data for USD
-==================================================
-Running command: poetry run loop-collect --asset USD --blocks-period 3500
-
-Script completed at 2024-02-20 15:30:00
-```
-
-The script shows:
-- Section headers for each asset
-- Command execution status
-- Balance collection progress
-- Upload status for each file
-- Success/failure messages
-- Timestamps for completion
 
 ## Development
 
-### Running Tests
-
 ```bash
-poetry run pytest
-```
-
-### Code Style
-
-The project uses:
-- Black for code formatting
-- isort for import sorting
-- flake8 for linting
-- mypy for type checking
-
-Run all checks:
-```bash
-poetry run black .
-poetry run isort .
-poetry run flake8 .
-poetry run mypy .
+make lint     # ruff, ruff format, mypy --strict, tsc
+make test     # pytest (in-memory EVM + Postgres via TEST_DATABASE_URL) and vitest
 ```
 
 ## License
 
-MIT
+[GPL-3.0](LICENSE).
