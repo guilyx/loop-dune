@@ -6,7 +6,7 @@ from datetime import UTC, datetime, timedelta
 import httpx
 import pytest
 
-from loop_indexer.scheduler import Heartbeat, Scheduler, Step, next_slot
+from loop_indexer.scheduler import Heartbeat, Scheduler, Step, next_slot, refresh_dashboard
 
 H = timedelta(hours=1)
 M = timedelta(minutes=1)
@@ -126,3 +126,21 @@ def test_stop_interrupts_the_wait() -> None:
 def test_offset_must_fit_in_interval() -> None:
     with pytest.raises(ValueError, match="offset"):
         Scheduler([], every=H, offset=H, heartbeat=Heartbeat(None))
+
+
+def test_refresh_dashboard_sends_bearer_token() -> None:
+    seen: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(request)
+        return httpx.Response(200, json={"revalidated": True})
+
+    url = "http://dashboard:3000/api/revalidate"
+    assert refresh_dashboard(url, "s3cret", transport=httpx.MockTransport(handler))
+    assert seen[0].method == "POST"
+    assert seen[0].headers["authorization"] == "Bearer s3cret"
+
+
+def test_refresh_dashboard_reports_rejection() -> None:
+    transport = httpx.MockTransport(lambda _: httpx.Response(401))
+    assert not refresh_dashboard("http://dashboard/api/revalidate", "bad", transport=transport)

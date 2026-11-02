@@ -4,7 +4,8 @@ GitHub Actions and Kubernetes have their own cron; a plain server does not, and
 system cron loses the container's environment and logs. `loop-indexer schedule`
 runs the same steps as the hourly workflow on a fixed wall-clock grid:
 
-    index -> export to Dune (if configured) -> freshness check -> heartbeat
+    index -> export to Dune (if configured) -> refresh the dashboard (if configured)
+    -> freshness check -> heartbeat
 
 Each step is isolated: a failing Dune export never stops the next hour's indexing.
 After every cycle an optional heartbeat URL is pinged (healthchecks.io convention:
@@ -67,6 +68,18 @@ class Heartbeat:
     def close(self) -> None:
         if self._http is not None:
             self._http.close()
+
+
+def refresh_dashboard(
+    url: str, token: str, *, transport: httpx.BaseTransport | None = None
+) -> bool:
+    """Ask the dashboard to rebuild its cached pages now (``POST /api/revalidate``)."""
+    with httpx.Client(timeout=30.0, transport=transport) as http:
+        response = http.post(url, headers={"Authorization": f"Bearer {token}"})
+    if response.is_error:
+        log.warning("schedule.refresh_failed", status=response.status_code)
+        return False
+    return True
 
 
 class Scheduler:

@@ -315,7 +315,7 @@ def schedule(
 ) -> None:
     """Run index -> Dune export -> health on a fixed schedule until stopped (SIGTERM-safe)."""
     from loop_indexer.pipeline import RunOptions
-    from loop_indexer.scheduler import Heartbeat, Scheduler, Step
+    from loop_indexer.scheduler import Heartbeat, Scheduler, Step, refresh_dashboard
 
     settings, registry = get_settings(), load_registry()
     chains = list(registry.chains)
@@ -346,6 +346,10 @@ def schedule(
     steps = [Step("index", index)]
     if dune and _dune_configured(settings):
         steps.append(Step("export-dune", export))
+    revalidate_url, token = settings.dashboard_revalidate_url, settings.revalidate_token
+    if revalidate_url and token:
+        secret = token.get_secret_value()
+        steps.append(Step("refresh-dashboard", lambda: refresh_dashboard(revalidate_url, secret)))
     steps.append(Step("health", check))
 
     heartbeat = Heartbeat(settings.heartbeat_url)
