@@ -1,0 +1,156 @@
+# Loop Protocol contract registry.
+#
+# Describes *what exists* on-chain. The metrics sampled for each entity are defined in
+# code (loop_indexer/registry.py) so every market is measured identically.
+#
+# Every fact below was read from chain, not copied from a UI:
+#   * tokens/decimals via symbol()/decimals(), pool.asset(), staking.asset(), vault.token()
+#   * deployment blocks via eth_getCode binary search (loop_indexer.chain.deploy)
+#   * vault lists via pool.creditManagers()
+# `loop-indexer registry verify` re-checks all of it against an archive node and fails
+# if anything drifted (e.g. a new vault was added to a pool).
+
+version: 1
+
+chains:
+  ethereum:
+    chain_id: 1
+    name: Ethereum
+    rpc_urls_env: ETH_RPC_URLS
+    explorer: https://etherscan.io
+  bsc:
+    chain_id: 56
+    name: BNB Smart Chain
+    rpc_urls_env: BSC_RPC_URLS
+    explorer: https://bscscan.com
+
+markets:
+  # ------------------------------------------------------------------ lpETH (Ethereum)
+  - id: eth
+    name: Loop ETH
+    chain: ethereum
+    underlying: { address: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", symbol: WETH, decimals: 18 }
+    pool: { address: "0xa684EAf215ad323452e2B2bF6F817d4aa5C116ab", symbol: lpETH, decimals: 18, deployed_block: 20936531 }
+    staking: { address: "0x3976d71e7DdFBaB9bD120Ec281B7d35fa0F28528", symbol: slpETH, decimals: 18, deployed_block: 21175896 }
+    locker: { address: "0x110f00b890102A7534484db8b3C5695Bd49De27b", deployed_block: 21175897 }
+    flash_lenders: ["0x6670CC1d4DEbe29eC12F1dA6D66a2A487431B3D5"]
+    vaults:
+      - id: spectra-yneth-v1
+        name: Spectra sw-ynETH LP (v1)
+        address: "0x7fC6f72E895F1ed110799f5d6594149e4A0B7Ff3"
+        deployed_block: 21386989
+        collateral: { address: "0x2408569177553A427dd6956E1717f2fBE1a96F1D", symbol: SPT-sw-ynETH, decimals: 18 }
+        notes: Earlier vault for the same collateral as spectra-yneth; its pool debt ceiling reads 0 at recent blocks.
+      - id: spectra-yneth
+        name: Spectra sw-ynETH LP
+        address: "0x9BfCD3788f923186705259ae70A1192F601BeB47"
+        deployed_block: 21387639
+        collateral: { address: "0x2408569177553A427dd6956E1717f2fBE1a96F1D", symbol: SPT-sw-ynETH, decimals: 18 }
+      - id: spectra-ynethx
+        name: Spectra ynETHx LP
+        address: "0x9c5EE26b9623cA864693C575a8fBc8933ae964E7"
+        deployed_block: 22162103
+        collateral: { address: "0xBc48c48789031A130F957c59e07B7F987aA642dE", symbol: SPT-ynETHx, decimals: 18 }
+      - id: pendle-teth-may25
+        name: Pendle tETH LP (29 May 2025)
+        address: "0x1438F04666C48957b1D7673684e4a1E505c80aF6"
+        deployed_block: 22182585
+        collateral: { address: "0xBDb8F9729d3194f75fD1A3D9bc4FFe0DDe3A404c", symbol: LPT-tETH-29MAY2025, decimals: 18 }
+      - id: pendle-unieth-jun25
+        name: Pendle uniETH LP (26 Jun 2025)
+        address: "0x7A0734Fa26e188483aae3d4332F19404FEA87832"
+        deployed_block: 22182588
+        collateral: { address: "0xbbA9BAaa6b3107182147A12177e0F1Ec46B8b072", symbol: LPT-uniETH-26JUN2025, decimals: 18 }
+      - id: pendle-rsweth-jun25
+        name: Pendle rswETH LP (26 Jun 2025)
+        address: "0x868527fd3Fad53149be0e75eEeaBE4f008D27E81"
+        deployed_block: 22182591
+        collateral: { address: "0xfd5Cf95E8b886aCE955057cA4DC69466e793FBBE", symbol: LPT-rswETH-26JUN2025, decimals: 18 }
+      - id: pendle-pufeth-jun25
+        name: Pendle pufETH LP (26 Jun 2025)
+        address: "0x314A8cB19b5F245C7f109f50F4FaA06cD70C7Aa4"
+        deployed_block: 22182594
+        collateral: { address: "0x58612beB0e8a126735b19BB222cbC7fC2C162D2a", symbol: LPT-pufETH-26JUN2025, decimals: 18 }
+      - id: spectra-inwsteths
+        name: Spectra sw-inwstETHs LP
+        address: "0x03d30243138D45383F02BCA884D42068523bdE22"
+        deployed_block: 22389401
+        collateral: { address: "0x2cd244f1f9A856C251d276103862dD4325985D2A", symbol: SPT-sw-inwstETHs, decimals: 18 }
+      - id: pendle-teth-jan26
+        name: Pendle tETH LP (8 Jan 2026)
+        address: "0xb85095c4B18a7d16559A0bFd764F51F0d030587f"
+        deployed_block: 22646081
+        collateral: { address: "0x3DAF20E46708E556570159Eaf98eeE53A1A5b8A4", symbol: LPT-tETH-8JAN2026, decimals: 18 }
+
+  # ------------------------------------------------------------------ lpUSD (Ethereum)
+  - id: usd
+    name: Loop USD
+    chain: ethereum
+    underlying: { address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", symbol: USDC, decimals: 6 }
+    pool: { address: "0x0eecBDbF7331B8a50FCd0Bf2C267Bf47BD876054", symbol: lpUSD, decimals: 6, deployed_block: 21975000 }
+    staking: { address: "0xBFB53910C935E837C74e6C4EF584557352d20fDe", symbol: slpUSDC, decimals: 6, deployed_block: 22074510 }
+    locker: { address: "0xACA47DE7910FD8f108B147d69ADDBaC6Cc18966E", deployed_block: 22074511 }
+    flash_lenders: ["0x663A68f2B5ED9194EEC31C4Af57C384adB1886A2"]
+    vaults:
+      - id: spectra-sdeusd
+        name: Spectra sdeUSD LP
+        address: "0xbb23b7ACdE2B3A2E6446B16Cd3Dd471b0d80342c"
+        deployed_block: 22074526
+        collateral: { address: "0x09d484B738dD85CE3953102453E91507982121d0", symbol: SPT-sdeUSD, decimals: 18 }
+        notes: spotPrice() reverts at recent blocks; those hours have no spot_price observation.
+      - id: pendle-eusde-aug25
+        name: Pendle eUSDe LP (14 Aug 2025)
+        address: "0x16575edcB68613188D70b194b8FD89Df0f6eDFaE"
+        deployed_block: 22696043
+        collateral: { address: "0xE93B4A93e80BD3065B290394264af5d82422ee70", symbol: LPT-eUSDE-14AUG2025, decimals: 18 }
+      - id: pendle-syrupusdc-aug25
+        name: Pendle syrupUSDC LP (28 Aug 2025)
+        address: "0x18C15607C91C6FC51DB6429e7Fdf5f6165dEED83"
+        deployed_block: 22696046
+        collateral: { address: "0x9A63FA80b5DDFd3Cab23803fdB93ad2c18F3d5aa", symbol: LPT-syrupUSDC-28AUG2025, decimals: 18 }
+        spot_price_decimals: 30
+        notes: The oracle reports prices scaled by 1e30 (WAD x 1e12) rather than 1e18.
+      - id: pendle-susdf-sep25
+        name: Pendle sUSDf LP (25 Sep 2025)
+        address: "0x078DBC4815A13ACD3c6BB19fcdDdB4Aefd086137"
+        deployed_block: 22817796
+        collateral: { address: "0x45F163E583D34b8E276445dd3Da9aE077D137d72", symbol: LPT-sUSDf-25SEP2025, decimals: 18 }
+
+  # ------------------------------------------------------------------ lpBNB (BNB Chain)
+  - id: bnb
+    name: Loop BNB
+    chain: bsc
+    underlying: { address: "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c", symbol: WBNB, decimals: 18 }
+    pool: { address: "0xED166436559Fd3d7f44cb00CACDA96EB999D789e", symbol: lpBNB, decimals: 18, deployed_block: 44650147 }
+    staking: { address: "0x76a173580Ac0456Fd208A593722998d6b5B7063d", symbol: slpBNB, decimals: 18, deployed_block: 46450339 }
+    locker: { address: "0x7Cdd4fc8715e5A45E0f9424b7D0e630E1aCF5BC4", deployed_block: 46450341 }
+    flash_lenders: ["0x0FD87690fcd1Ae9245edB7de8c598AEcCFaf427c"]
+    vaults:
+      - id: pendle-clisbnb-apr25
+        name: Pendle clisBNB LP (24 Apr 2025)
+        address: "0x03C07e6d561b664246058974dB31dbF1c1C0B416"
+        deployed_block: 46454092
+        collateral: { address: "0x1d9D27f0b89181cF1593aC2B36A37B444Eb66bEE", symbol: LPT-clisBNB-24APR2025, decimals: 18 }
+      - id: pendle-clisbnb-oct25
+        name: Pendle clisBNB LP (30 Oct 2025)
+        address: "0x3790Fbb57ae1bd0d39dA6b664e6a8010ec296822"
+        deployed_block: 48637619
+        collateral: { address: "0xBD577dDABb5a1672d3C786726b87A175de652b96", symbol: LPT-clisBNB-30OCT2025, decimals: 18 }
+
+  # ------------------------------------------------------------------ lpBTC (BNB Chain)
+  - id: btc
+    name: Loop BTC
+    chain: bsc
+    underlying: { address: "0x7130d2A12B9BCbFAe4f2634d864A1Ee1Ce3Ead9c", symbol: BTCB, decimals: 18 }
+    pool: { address: "0xa02fcc8493856b5bd7fA5099f5a631A6cb77fBd1", symbol: lpBTC, decimals: 18, deployed_block: 50071072 }
+    staking: { address: "0x72a1AB567020CBbE1C7c21140E2611A6cb49a960", symbol: slpBTC, decimals: 18, deployed_block: 50071076 }
+    locker: { address: "0x7B4231155489560731677bD108c4972B712ba528", deployed_block: 50071079 }
+    flash_lenders: ["0x628eDEeCF43DB277b6a7a6248CE45a902fD7c705"]
+    vaults:
+      - id: yncobtck
+        name: ynCoBTCk
+        address: "0xF0F67671151FF8B9F2117BD3ac7406D9D3ee8f45"
+        deployed_block: 50072359
+        collateral: { address: "0x132376b153d3cFf94615fe25712DB12CaAADf547", symbol: ynCoBTCk, decimals: 8 }
+        registered: false
+        notes: Points at the lpBTC pool but was never added as a credit manager, so it cannot borrow.

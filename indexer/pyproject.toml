@@ -1,0 +1,83 @@
+[project]
+name = "loop-indexer"
+version = "1.0.0"
+description = "Hourly on-chain state indexer for Loop Protocol markets, with Postgres storage and Dune export."
+readme = "README.md"
+license = "GPL-3.0-only"
+requires-python = ">=3.11"
+authors = [{ name = "Erwin Lejeune" }]
+dependencies = [
+    "eth-abi>=5.1,<6",
+    "eth-utils>=5.1,<6",
+    "eth-hash[pycryptodome]>=0.7,<1",
+    "httpx>=0.27,<1",
+    "psycopg[binary]>=3.2,<4",
+    "pydantic>=2.8,<3",
+    "pydantic-settings>=2.4,<3",
+    "pyyaml>=6.0,<7",
+    "structlog>=24.4",
+    "typer>=0.12,<1",
+]
+
+[project.scripts]
+loop-indexer = "loop_indexer.cli:app"
+
+[dependency-groups]
+dev = [
+    "mypy>=1.11",
+    "pytest>=8.3",
+    "pytest-cov>=5.0",
+    "ruff>=0.6",
+    "types-pyyaml>=6.0",
+]
+
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/loop_indexer"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF", "N", "S", "PT", "DTZ", "RET", "PL"]
+ignore = [
+    "PLR0913", # CLI commands and dataclasses legitimately take many arguments
+    "PLR2004", # magic numbers are fine for protocol constants with comments
+    "S608",    # SQL is built from constant fragments only, values are always parameterised
+    "PLC0415", # CLI commands import heavy modules lazily to keep startup fast
+    "PLR0917", # typer commands map options to positional parameters
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "PLR2004", "S105", "S106", "S311", "PLR0911"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+mypy_path = "src"
+packages = ["loop_indexer"]
+
+[[tool.mypy.overrides]]
+module = ["eth_abi.*", "eth_utils.*", "eth_hash.*"]
+ignore_missing_imports = true
+implicit_reexport = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers"
+markers = [
+    "db: needs a Postgres database (TEST_DATABASE_URL)",
+]
+
+[tool.coverage.run]
+source = ["loop_indexer"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
