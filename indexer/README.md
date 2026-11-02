@@ -17,6 +17,7 @@ uv run loop-indexer --help
 | `export dune [--full]` | append new observations to Dune; refresh catalogue tables |
 | `export static --out DIR` | end-of-day JSON for the dashboard's no-database mode |
 | `health [--max-lag 3h]` | exit 1 if any chain is stale |
+| `schedule [--every 1h] [--offset 17m]` | long-running: migrate, then index → Dune → refresh dashboard → health every hour; SIGTERM-safe; pings `HEARTBEAT_URL` (`/fail` on errors) |
 
 Configuration is environment-only; see [`../.env.example`](../.env.example).
 

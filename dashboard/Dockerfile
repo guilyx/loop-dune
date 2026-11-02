@@ -5,7 +5,10 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --no-audit --no-fund
 COPY . .
-ENV NEXT_OUTPUT=standalone NEXT_TELEMETRY_DISABLED=1
+# NEXT_PUBLIC_* values are inlined at build time.
+ARG NEXT_PUBLIC_DUNE_NAMESPACE=
+ENV NEXT_OUTPUT=standalone NEXT_TELEMETRY_DISABLED=1 \
+    NEXT_PUBLIC_DUNE_NAMESPACE=${NEXT_PUBLIC_DUNE_NAMESPACE}
 RUN npm run build
 
 FROM node:26-bookworm-slim

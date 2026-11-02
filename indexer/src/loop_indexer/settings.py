@@ -34,6 +34,12 @@ class Settings(BaseSettings):
 
     migrations_dir: Path | None = None
 
+    #: Dead-man's switch pinged after each `schedule` cycle (``<url>`` / ``<url>/fail``).
+    heartbeat_url: str | None = None
+    #: Dashboard on-demand refresh (``POST /api/revalidate``), called after each cycle.
+    dashboard_revalidate_url: str | None = None
+    revalidate_token: SecretStr | None = None
+
     log_level: str = "INFO"
     log_format: Literal["auto", "json", "console"] = "auto"
 

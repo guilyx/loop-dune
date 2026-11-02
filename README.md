@@ -39,7 +39,8 @@ flowchart LR
   no-ops, and outages repair themselves on the next run.
 
 Details: [architecture](docs/architecture.md) · [data model](docs/data-model.md) ·
-[deployment](docs/deployment.md) · [Dune](dune/README.md).
+[deployment](docs/deployment.md) · [VPS](docs/vps.md) · [backups](docs/backups.md) ·
+[Dune](dune/README.md).
 
 ![Market page](docs/img/market-eth.png)
 
@@ -77,6 +78,17 @@ make export-static dashboard  # http://localhost:3000
 
 The dashboard also runs with **no database**: `cd dashboard && npm ci && npm run dev`
 serves the committed snapshot in `dashboard/data/`.
+
+## Hosting
+
+Two ready-made setups, nothing deployed until you switch it on:
+
+| | Managed | Single VPS |
+|---|---|---|
+| Stack | Supabase + GitHub Actions + Vercel | Docker Compose: Postgres, indexer, dashboard, Caddy (HTTPS), backups |
+| Set up | [docs/deployment.md](docs/deployment.md) | `bootstrap.sh` + one `.env` ([docs/vps.md](docs/vps.md)) |
+| Deploys | Vercel on push | GHCR images on push, optional SSH roll-forward and one-click rollback |
+| Backups | Supabase | Daily, age-encrypted, offsite to any S3 bucket, restore-drilled weekly in CI ([docs/backups.md](docs/backups.md)) |
 
 ## Using the data
 
@@ -123,9 +135,10 @@ old pipeline is in [docs/legacy-review.md](docs/legacy-review.md).
 indexer/      Python indexer: registry, chain client, pipeline, Postgres, exporters, CLI
 supabase/     SQL migrations: tables, analysis views, read-only role
 dashboard/    Next.js dashboard and JSON/CSV API (Postgres or static snapshot)
+deploy/       VPS stack (compose, Caddy, provisioning, stack.sh) and the backup image
 dune/         DuneSQL queries over the exported tables
 docs/         architecture, data model, deployment runbook, legacy review
-.github/      CI (lint, types, tests, builds) and the hourly indexer workflow
+.github/      CI, hourly indexer, image release + VPS deploy, weekly restore drill
 ```
 
 ## Development

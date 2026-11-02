@@ -4,8 +4,11 @@ name: Indexer
 # Weekly: re-verify the contract registry against the chain (catches new vaults).
 #
 # Disabled until the repository variable INDEXER_ENABLED is set to "true".
-# Secrets: DATABASE_URL, ETH_RPC_URLS, BSC_RPC_URLS, DUNE_API_KEY (optional)
-# Variables: INDEXER_ENABLED, DUNE_NAMESPACE (optional)
+# Secrets: DATABASE_URL, ETH_RPC_URLS, BSC_RPC_URLS, DUNE_API_KEY (optional),
+#          REVALIDATE_TOKEN (optional, refreshes the dashboard after each run)
+# Variables: INDEXER_ENABLED, DUNE_NAMESPACE (optional),
+#          DASHBOARD_REVALIDATE_URL (optional, https://<dashboard>/api/revalidate)
+# Running the stack on a VPS instead? Leave this off: deploy/vps runs the same loop.
 # See docs/deployment.md.
 
 on:
@@ -61,6 +64,13 @@ jobs:
       - name: Export to Dune
         if: ${{ !cancelled() && env.DUNE_API_KEY != '' && env.DUNE_NAMESPACE != '' }}
         run: uv run loop-indexer export dune ${{ inputs.full_dune_reload && '--full' || '' }}
+      - name: Refresh the dashboard
+        if: ${{ !cancelled() && vars.DASHBOARD_REVALIDATE_URL != '' }}
+        env:
+          REVALIDATE_TOKEN: ${{ secrets.REVALIDATE_TOKEN }}
+          URL: ${{ vars.DASHBOARD_REVALIDATE_URL }}
+        run: |
+          curl -fsS -m 30 -X POST -H "Authorization: Bearer $REVALIDATE_TOKEN" "$URL"
       - name: Freshness
         if: ${{ !cancelled() }}
         run: uv run loop-indexer health --max-lag 3h

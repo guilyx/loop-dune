@@ -1,0 +1,23 @@
+# HTTPS with automatic Let's Encrypt certificates for $DOMAIN. Set DOMAIN=:80 in .env
+# to serve plain HTTP on the server IP (e.g. before DNS is pointed at the box).
+{
+	email {$ACME_EMAIL}
+}
+
+{$DOMAIN} {
+	encode zstd gzip
+	reverse_proxy dashboard:3000
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+		-Server
+	}
+
+	log {
+		output stdout
+		format json
+	}
+}

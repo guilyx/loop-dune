@@ -1,0 +1,116 @@
+name: Release
+
+# On every push to master: build the three images and publish them to GHCR, tagged with
+# the commit SHA and `latest`. Then, if VPS deploys are enabled, SSH to the server and
+# roll it forward to that exact SHA (config from git, images from GHCR).
+#
+# Rollback: run this workflow by hand with `deploy_tag` set to an earlier commit SHA.
+#
+# Variables: VPS_DEPLOY_ENABLED ("true" to deploy), VPS_APP_DIR (default /opt/loop-dune),
+#            DUNE_NAMESPACE (baked into the dashboard), IMAGE_PLATFORMS (default
+#            linux/amd64; "linux/amd64,linux/arm64" for ARM servers)
+# Secrets:   VPS_HOST, VPS_USER, VPS_SSH_KEY (private key), VPS_KNOWN_HOSTS
+#            (`ssh-keyscan -t ed25519 <host>` output)
+# See docs/vps.md.
+
+on:
+  push:
+    branches: [master]
+    paths-ignore: ["**.md", "docs/**", "dune/**"]
+  workflow_dispatch:
+    inputs:
+      deploy_tag:
+        description: Deploy an existing image tag (commit SHA) without building, e.g. to roll back
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false   # never interrupt a deploy half-way
+
+jobs:
+  images:
+    if: inputs.deploy_tag == ''
+    name: Publish ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      matrix:
+        include:
+          - name: indexer
+            context: .
+            file: indexer/Dockerfile
+          - name: dashboard
+            context: dashboard
+            file: dashboard/Dockerfile
+          - name: backup
+            context: deploy/backup
+            file: deploy/backup/Dockerfile
+    steps:
+      - uses: actions/checkout@v7
+      - uses: docker/setup-qemu-action@v3
+        if: contains(vars.IMAGE_PLATFORMS, 'arm64')
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/loop-dune-${{ matrix.name }}
+          tags: |
+            type=sha,format=long,prefix=
+            type=raw,value=latest,enable={{is_default_branch}}
+      - uses: docker/build-push-action@v7
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.file }}
+          platforms: ${{ vars.IMAGE_PLATFORMS || 'linux/amd64' }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            NEXT_PUBLIC_DUNE_NAMESPACE=${{ vars.DUNE_NAMESPACE }}
+          cache-from: type=gha,scope=release-${{ matrix.name }}
+          cache-to: type=gha,mode=max,scope=release-${{ matrix.name }}
+
+  deploy:
+    name: Deploy to VPS
+    needs: images
+    if: >-
+      always() && vars.VPS_DEPLOY_ENABLED == 'true'
+      && (needs.images.result == 'success'
+          || (needs.images.result == 'skipped' && inputs.deploy_tag != ''))
+    runs-on: ubuntu-latest
+    environment: production   # add required reviewers here if you want a manual gate
+    timeout-minutes: 15
+    env:
+      TAG: ${{ inputs.deploy_tag || github.sha }}
+      APP_DIR: ${{ vars.VPS_APP_DIR || '/opt/loop-dune' }}
+    steps:
+      - name: Check the tag
+        run: '[[ "$TAG" =~ ^[0-9a-f]{40}$ ]] || { echo "deploy_tag must be a full commit SHA"; exit 1; }'
+      - name: SSH credentials
+        env:
+          SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key && chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+      - name: Roll forward
+        env:
+          VPS: ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}
+        run: |
+          ssh -i ~/.ssh/deploy_key -o BatchMode=yes -o StrictHostKeyChecking=yes "$VPS" \
+            "set -e; cd '$APP_DIR' && git fetch --quiet origin && git checkout --quiet --detach '$TAG' \
+             && deploy/vps/stack.sh deploy '$TAG'"
+      - name: Summary
+        run: echo "Deployed \`$TAG\` to the VPS." >> "$GITHUB_STEP_SUMMARY"
