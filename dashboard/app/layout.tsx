@@ -28,7 +28,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
               </svg>
               Loop Analytics
             </Link>
-            <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
               <Nav markets={meta.markets.map((m) => ({ id: m.id, label: m.name.replace(/^Loop /, "") }))} />
               <ThemeToggle />
             </div>

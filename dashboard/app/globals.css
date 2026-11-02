@@ -517,3 +517,25 @@ pre.code {
   color: var(--text-muted);
   font-size: 13px;
 }
+
+/* ------------------------------------------------------------------ small screens */
+
+table.data td:first-child {
+  min-width: 190px;
+}
+
+@media (max-width: 720px) {
+  .topbar {
+    flex-wrap: wrap;
+  }
+  .topbar > div {
+    width: 100%;
+    justify-content: space-between;
+  }
+  h1 {
+    font-size: 24px;
+  }
+  .hero {
+    font-size: 40px;
+  }
+}
