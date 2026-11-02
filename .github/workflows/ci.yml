@@ -66,6 +66,47 @@ jobs:
       - run: npm test
       - run: npm run build
 
+  backups:
+    name: Backups (shellcheck, image, restore round trip)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: loop
+          POSTGRES_PASSWORD: loop
+          POSTGRES_DB: loop_ci
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U loop -d loop_ci"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://loop:loop@localhost:5432/loop_ci
+    steps:
+      - uses: actions/checkout@v5
+      - name: shellcheck
+        run: shellcheck -x -P SCRIPTDIR deploy/backup/*.sh deploy/vps/*.sh
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: indexer/uv.lock
+      - name: Migrate and seed
+        working-directory: indexer
+        run: |
+          uv sync --frozen --no-dev
+          uv run loop-indexer db migrate
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -q -f ../deploy/backup/testdata.sql
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: deploy/backup
+          load: true
+          tags: loop-backup:ci
+          cache-from: type=gha,scope=backup
+          cache-to: type=gha,mode=max,scope=backup
+      - name: Backup -> offsite -> restore -> drill, inside the image
+        run: docker run --rm --network host -e DATABASE_URL loop-backup:ci roundtrip
+
   images:
     name: Docker images build
     runs-on: ubuntu-latest
