@@ -11,9 +11,9 @@ uv run loop-indexer --help
 | Command | What it does |
 |---|---|
 | `db migrate` | apply `supabase/migrations/*.sql` (idempotent) |
-| `registry show [--json]` | list the 114 series and how each is read |
+| `registry show [--json]` | list the 146 series and how each is read |
 | `registry verify [--chain …]` | re-check every registry fact against an archive node |
-| `run [--interval 1h] [--from …] [--to …] [--force] [--chain …]` | snapshot every missing grid point since deployment |
+| `run [--interval 1h] [--from …] [--to …] [--force] [--chain …]` | snapshot every missing grid point since deployment, and back-fill newly registered series at stored blocks |
 | `export dune [--full]` | append new observations to Dune; refresh catalogue tables |
 | `export static --out DIR` | end-of-day JSON for the dashboard's no-database mode |
 | `health [--max-lag 3h]` | exit 1 if any chain is stale |

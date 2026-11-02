@@ -104,6 +104,6 @@ standalone image too: `docker build -t loop-dashboard dashboard/`.
 | Which calls fail? | `select ts, failed_series from loop.snapshots where failed_count > 0 order by ts desc` |
 | Backfill a window | `loop-indexer run --from 2025-01-01 --to 2025-02-01` |
 | Re-read a window (e.g. after a registry fix) | `loop-indexer run --from … --to … --force` |
-| A new vault appeared | add it to `markets.yaml`, run `registry verify`, then `run --force` from its deployment date |
+| A new vault or metric | add it to `markets.yaml` (or the series templates), run `registry verify`; the next `run` back-fills its history at the stored snapshot blocks |
 | Rebuild the Dune table | `loop-indexer export dune --full` |
 | Rotate an RPC key | update the `*_RPC_URLS` secret; several URLs give failover |

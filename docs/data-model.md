@@ -23,17 +23,24 @@ the timestamp of the block actually read, which is at or just before `ts`.
 |---|---|---|
 | `observations_enriched` | (series, ts) | observations + catalogue context |
 | `market_hourly` | (market, hour) | `tvl`, `available_liquidity`, `total_borrowed`, `utilization`, `borrow_apr`, `supply_apr`, `lp_supply`, `lp_price`, `slp_supply`, `slp_price`, `staked_tvl`, `locked_tvl`, `collateral_value`, `vault_debt`, `active_vaults` |
-| `vault_hourly` | (vault, hour) | `collateral_balance`, `spot_price`, `collateral_value`, `total_debt`, `debt_ceiling`, `pool_borrowed`, `ltv` |
+| `vault_hourly` | (vault, hour) | `collateral_balance`, `spot_price`, `collateral_value`, `total_debt`, `debt_ceiling`, `pool_borrowed`, `ltv`, `liquidation_ratio`, `liquidation_penalty`, `max_ltv`, `capacity_used`, `drop_to_liquidation` |
 | `market_daily`, `vault_daily` | (…, day) | last hourly row of each UTC day |
+| `market_yield_daily` | (market, day) | `realized_apy_7d/30d/90d` (from lpX share price), `supply_apr`, `borrow_apr`, `utilization`, `pass_through` |
+| `market_flows_daily` | (market, day) | `tvl_change` = `interest` + `net_flow`, `borrow_change` |
+| `vault_share_daily` | (vault, day) | `debt_share`, `collateral_share` |
+| `market_concentration_daily` | (market, day) | `debt_hhi`, `top_vault_share`, `borrowing_vaults` |
+| `oracle_daily` | (vault, day) | `spot_price`, `prev_spot_price`, `spot_change` |
 | `series_latest` | series | latest value |
 | `chain_freshness` | chain | last snapshot, lag, failed calls |
+| `coverage_daily` | (chain, day) | snapshots, reverted calls, max block lag |
+| `series_health` | series | observations, reverted snapshots, last observed |
 
 Amounts in the views are in the market's **underlying token** (WETH, USDC, WBNB, BTCB).
 Rates and ratios are fractions (`0.0473` = 4.73%).
 
 ## Series
 
-114 series across 4 markets. Run `loop-indexer registry show --json` for the full list,
+146 series across 4 markets. Run `loop-indexer registry show --json` for the full list,
 or query `loop.series`.
 
 | Entity | Metric | Call | Scale |
@@ -52,6 +59,8 @@ or query `loop.series`.
 | vault | `collateral_balance` | `collateral.balanceOf(vault)` | collateral decimals |
 | vault | `debt_ceiling` | `pool.creditManagerDebtLimit(vault)` | underlying decimals |
 | vault | `pool_borrowed` | `pool.creditManagerBorrowed(vault)` | underlying decimals |
+| vault | `liquidation_ratio` | `vaultConfig()[1]` | WAD (1.1 = 110%) |
+| vault | `liquidation_penalty` | `liquidationConfig()[0]` | WAD (0.99 = 1% penalty) |
 
 ## Derived metrics
 
@@ -65,6 +74,12 @@ or query `loop.series`.
 | Locked TVL | `locked_shares × lp_price` |
 | Collateral value | `collateral_balance × spot_price` (in underlying, at the vault's own oracle) |
 | LTV | `total_debt / collateral_value` |
+| Capacity used | `LTV × liquidation_ratio`; ≥ 100% means the aggregate position is liquidatable |
+| Drop to liquidation | `1 − LTV × liquidation_ratio`: collateral price fall before liquidation |
+| Realized APY (n days) | `(lp_price_t / lp_price_{t−n})^(365/n) − 1`, net of any losses |
+| Pass-through | `supply_apr / (borrow_apr × utilization)`: borrower interest reaching lenders |
+| Interest / net deposits | `lp_supply_{t−1} × Δlp_price` / `Δlp_supply × lp_price_t`; they sum exactly to ΔTVL |
+| Debt HHI | `Σ debt_share²` across vaults; 100% = one vault holds all debt |
 
 ## Protocol quirks the model accounts for
 

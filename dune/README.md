@@ -28,6 +28,10 @@ Delivery is at-least-once. Always de-duplicate on `(series_id, ts)` keeping the 
 | [`02_vault_hourly.sql`](queries/02_vault_hourly.sql) | collateral, oracle price, debt and LTV per vault and hour |
 | [`03_tvl_daily.sql`](queries/03_tvl_daily.sql) | chart-ready end-of-day TVL / borrows / utilization |
 | [`04_market_overview.sql`](queries/04_market_overview.sql) | counters: latest state, all-time peak, drawdown |
+| [`05_flows_daily.sql`](queries/05_flows_daily.sql) | TVL change split into interest and net deposits |
+| [`06_realized_yield.sql`](queries/06_realized_yield.sql) | realized lender APY from share price vs quoted APR |
+| [`07_vault_risk.sql`](queries/07_vault_risk.sql) | capacity used and price drop to liquidation per vault |
+| [`08_debt_concentration.sql`](queries/08_debt_concentration.sql) | debt HHI and top-vault share per market |
 
 Each query takes a text parameter `{{namespace}}` (your `DUNE_NAMESPACE`). The
 definitions match the Postgres views in `supabase/migrations/`, so Dune and the hosted

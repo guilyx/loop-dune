@@ -11,7 +11,7 @@ Postgres, published to Dune, and shown on a dashboard.
 | | |
 |---|---|
 | **Markets** | lpETH and lpUSD on Ethereum; lpBNB and lpBTC on BNB Chain |
-| **Coverage** | 4 pools, 4 staking vaults, 16 CDP vaults, 114 series, from each pool's deployment block |
+| **Coverage** | 4 pools, 4 staking vaults, 16 CDP vaults, 146 series, from each pool's deployment block |
 | **Resolution** | hourly (UTC), with daily rollups |
 | **Outputs** | Postgres views · public Dune tables · Next.js dashboard · JSON/CSV API |
 
@@ -42,6 +42,24 @@ Details: [architecture](docs/architecture.md) · [data model](docs/data-model.md
 [deployment](docs/deployment.md) · [Dune](dune/README.md).
 
 ![Market page](docs/img/market-eth.png)
+
+## Analytics
+
+Every market page has five tabs, all scoped by one date-range filter:
+
+| Tab | What it answers |
+|---|---|
+| **Overview** | TVL, borrows, utilization, rates, collateral vs debt, share price, staked/locked, vault table |
+| **Yield** | What lenders *actually* earned (realized APY from the share price, 7/30/90 days) vs the quoted APR; cumulative interest; how much borrower interest reached lenders |
+| **Flows** | Each day's TVL change split exactly into interest and net deposits; weekly deposits/withdrawals and borrows/repayments |
+| **Risk** | Interactive **stress test** (collateral price shock → vaults past their liquidation ratio, debt at risk, uncovered debt); liquidation-proximity heatmap; debt mix and concentration (HHI); oracle events |
+| **Rate model** | Utilization vs borrow APR for every day, with the empirical rate curve, and how often the pool ran hot |
+
+The definitions live once, in SQL views (`loop.market_yield_daily`,
+`loop.market_flows_daily`, …), and are mirrored by the [Dune queries](dune/queries/).
+A data-health panel shows coverage per chain and every reverting series.
+
+![Risk tab with the stress test](docs/img/market-eth-risk.png)
 
 ## Quick start
 
@@ -84,6 +102,14 @@ The indexer surfaced things the protocol's own accounting hid:
   $150k of collateral. Debt peaked at 124k USDC. 4,000 USDC is still outstanding.
 * **10 of 16 vaults were never tracked** by the previous pipeline, including vaults with
   debt. Its BNB pool metrics read an Ethereum address and were always zero.
+* **Lenders took losses.** The lpETH share price peaked at 1.0155 (5 Feb 2025) and fell
+  to 1.0012 by mid-2025, a ~1.4% loss of deposit value. lpUSD shows similar write-downs
+  (largest single day −4,195 USDC, 26 Sep 2025).
+* **The rate model was retuned.** At 75–85% utilization, lpETH charged ~21% APR before
+  June 2025 and ~7% after, visible as two separate curves on the Rate model tab (only 5
+  days fall in that band after June).
+* **An oracle collapsed.** sdeUSD's price fell 90% in one day (7 Nov 2025) and its oracle
+  has reverted ever since; 2,236 USDC of debt sits in a vault that can no longer be valued.
 * **TVL is 92–99% below its peak.** lpETH went from 915 to 77 WETH, lpUSD from 594k to
   12.9k USDC, and lpBNB from 1,588 to 10 WBNB (2 Nov 2026). lpBTC shows no deposits in
   any daily sample. What remains on lpETH is still 86% borrowed.

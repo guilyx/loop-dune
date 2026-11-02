@@ -89,6 +89,12 @@ successful run. All writes are upserts. A re-sample that reads identical values 
 `ingested_at` unchanged, so nothing is re-exported. A run that could not fill every
 point exits non-zero, which fails the workflow and notifies you.
 
+Adding a metric or a vault backfills itself. Each series records when it was
+registered (`series.created_at`). Snapshots taken before that are re-read **at their
+stored block**: one multicall each, with no timestamp-to-block resolution. Adding the
+two liquidation-parameter series back-filled 1,325 daily snapshots on both chains in
+under two minutes.
+
 ### 7. At-least-once delivery to Dune
 
 The Dune exporter pages through observations in `(ingested_at, series_id, ts)` order
