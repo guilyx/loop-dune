@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import json
+import signal
 import sys
+from datetime import timedelta
 from pathlib import Path
-from typing import Annotated
+from typing import TYPE_CHECKING, Annotated, Any
 
 import structlog
 import typer
@@ -16,6 +18,10 @@ from loop_indexer.registry import Registry, load_registry
 from loop_indexer.settings import Settings, get_settings
 from loop_indexer.storage.store import Store
 from loop_indexer.timegrid import parse_duration, parse_time
+
+if TYPE_CHECKING:
+    from loop_indexer.exporters.dune import ExportStats
+    from loop_indexer.pipeline import ChainStats, RunOptions
 
 app = typer.Typer(no_args_is_help=True, add_completion=False, help=__doc__)
 db_app = typer.Typer(no_args_is_help=True, help="Database management.")
@@ -153,7 +159,7 @@ def run(
     ] = None,
 ) -> None:
     """Snapshot every missing grid point since deployment (idempotent, self-healing)."""
-    from loop_indexer.pipeline import Indexer, RunOptions
+    from loop_indexer.pipeline import RunOptions
 
     settings, registry = get_settings(), load_registry()
     chains = _chains(registry, chain)
@@ -167,6 +173,25 @@ def run(
         finality_seconds=settings.finality_seconds,
     )
     params = {"chains": chains, "interval": interval, "from": start, "to": end, "force": force}
+    ok, results = _index(settings, registry, chains, options, params)
+    for r in results:
+        typer.echo(f"{r.chain}: {r.completed}/{r.planned} points, {r.topped_up} back-filled, "
+                   f"{r.observations} observations, {r.failed_calls} reverted calls, "
+                   f"{len(r.failed_hours)} failed points, {r.seconds}s")  # fmt: skip
+    if not ok:
+        raise typer.Exit(1)
+
+
+def _index(
+    settings: Settings,
+    registry: Registry,
+    chains: list[str],
+    options: RunOptions,
+    params: dict[str, Any],
+) -> tuple[bool, list[ChainStats]]:
+    """Run the indexer and record the run; returns (all points filled, per-chain stats)."""
+    from loop_indexer.pipeline import Indexer
+
     with Store(settings.database_url) as store:
         run_id = store.start_run("run", params)
         try:
@@ -179,27 +204,21 @@ def run(
         ok = all(r.ok for r in results)
         stats = {r.chain: r.as_dict() for r in results}
         store.finish_run(run_id, "succeeded" if ok else "partial", stats)
-    for r in results:
-        typer.echo(f"{r.chain}: {r.completed}/{r.planned} points, {r.topped_up} back-filled, "
-                   f"{r.observations} observations, {r.failed_calls} reverted calls, "
-                   f"{len(r.failed_hours)} failed points, {r.seconds}s")  # fmt: skip
-    if not ok:
-        raise typer.Exit(1)
+    return ok, results
 
 
 # ---------------------------------------------------------------------------- export
 
 
-@export_app.command("dune")
-def export_dune(
-    full: Annotated[bool, typer.Option(help="Clear the Dune table and re-upload all.")] = False,
-    batch_size: Annotated[int, typer.Option(min=1, max=500_000)] = 50_000,
-    catalogue: Annotated[bool, typer.Option(help="Also refresh catalogue tables.")] = True,
-) -> None:
-    """Append new observations to Dune (public tables)."""
+def _dune_configured(settings: Settings) -> bool:
+    return bool(settings.dune_api_key and settings.dune_namespace)
+
+
+def _export_dune(
+    settings: Settings, *, full: bool = False, batch_size: int = 50_000, catalogue: bool = True
+) -> ExportStats:
     from loop_indexer.exporters.dune import DuneClient, DuneExporter
 
-    settings = get_settings()
     if not settings.dune_api_key or not settings.dune_namespace:
         raise typer.BadParameter("DUNE_API_KEY and DUNE_NAMESPACE must be set")
     client = DuneClient(settings.dune_api_key.get_secret_value(), base_url=settings.dune_api_url)
@@ -218,6 +237,17 @@ def export_dune(
         finally:
             client.close()
         store.finish_run(run_id, "succeeded", {"rows": stats.rows, "batches": stats.batches})
+    return stats
+
+
+@export_app.command("dune")
+def export_dune(
+    full: Annotated[bool, typer.Option(help="Clear the Dune table and re-upload all.")] = False,
+    batch_size: Annotated[int, typer.Option(min=1, max=500_000)] = 50_000,
+    catalogue: Annotated[bool, typer.Option(help="Also refresh catalogue tables.")] = True,
+) -> None:
+    """Append new observations to Dune (public tables)."""
+    stats = _export_dune(get_settings(), full=full, batch_size=batch_size, catalogue=catalogue)
     typer.echo(f"exported {stats.rows} rows to dune.{stats.table} in {stats.batches} batch(es)")
 
 
@@ -242,21 +272,98 @@ def health(
     max_lag: Annotated[str, typer.Option(help="Fail if a chain is older than this.")] = "3h",
 ) -> None:
     """Exit non-zero if any chain's latest snapshot is older than --max-lag."""
-    settings, registry = get_settings(), load_registry()
-    limit = parse_duration(max_lag)
+    lines, stale = _freshness_report(get_settings(), load_registry(), parse_duration(max_lag))
+    for line in lines:
+        typer.echo(line, err=line.startswith("STALE"))
+    if stale:
+        raise typer.Exit(1)
+
+
+def _freshness_report(
+    settings: Settings, registry: Registry, limit: timedelta
+) -> tuple[list[str], bool]:
     with Store(settings.database_url) as store:
         rows = {r["chain_id"]: r for r in store.freshness()}
+    lines: list[str] = []
     stale = False
     for name, chain in registry.chains.items():
         row = rows.get(chain.chain_id)
         if row is None or row["lag"] > limit:
             stale = True
             lag = "never" if row is None else str(row["lag"]).split(".")[0]
-            typer.echo(f"STALE {name}: last snapshot {lag} ago", err=True)
+            lines.append(f"STALE {name}: last snapshot {lag} ago")
         else:
-            typer.echo(f"ok    {name}: last snapshot {row['last_snapshot'].isoformat()}")
-    if stale:
-        raise typer.Exit(1)
+            lines.append(f"ok    {name}: last snapshot {row['last_snapshot'].isoformat()}")
+    return lines, stale
+
+
+# ---------------------------------------------------------------------------- schedule
+
+
+@app.command("schedule")
+def schedule(
+    every: Annotated[str, typer.Option(help="How often to run a cycle.")] = "1h",
+    offset: Annotated[
+        str, typer.Option(help="Delay after each boundary (lets the finality window pass).")
+    ] = "17m",
+    interval: Annotated[str, typer.Option(help="Sampling interval for indexing.")] = "1h",
+    max_lag: Annotated[str, typer.Option(help="Freshness threshold for the health step.")] = "3h",
+    dune: Annotated[bool, typer.Option(help="Export to Dune when credentials are set.")] = True,
+    concurrency: Annotated[int, typer.Option(min=1, max=32)] = 4,
+    run_now: Annotated[bool, typer.Option(help="Run a cycle immediately on start.")] = True,
+    migrate: Annotated[bool, typer.Option(help="Apply pending migrations on start.")] = True,
+) -> None:
+    """Run index -> Dune export -> health on a fixed schedule until stopped (SIGTERM-safe)."""
+    from loop_indexer.pipeline import RunOptions
+    from loop_indexer.scheduler import Heartbeat, Scheduler, Step
+
+    settings, registry = get_settings(), load_registry()
+    chains = list(registry.chains)
+    options = RunOptions(
+        interval=parse_duration(interval),
+        concurrency=concurrency,
+        finality_seconds=settings.finality_seconds,
+    )
+    limit = parse_duration(max_lag)
+
+    if migrate:
+        with Store(settings.database_url) as store:
+            store.migrate(_migrations_dir(settings))
+
+    def index() -> bool:
+        ok, _ = _index(settings, registry, chains, options, {"chains": chains, "schedule": True})
+        return ok
+
+    def export() -> None:
+        _export_dune(settings)
+
+    def check() -> bool:
+        lines, stale = _freshness_report(settings, registry, limit)
+        for line in lines:
+            log.info("schedule.freshness", line=line)
+        return not stale
+
+    steps = [Step("index", index)]
+    if dune and _dune_configured(settings):
+        steps.append(Step("export-dune", export))
+    steps.append(Step("health", check))
+
+    heartbeat = Heartbeat(settings.heartbeat_url)
+    scheduler = Scheduler(
+        steps, every=parse_duration(every), offset=parse_duration(offset), heartbeat=heartbeat
+    )
+
+    def _graceful(signum: int, _frame: object) -> None:
+        log.info("schedule.signal", signal=signal.Signals(signum).name)
+        scheduler.stop()
+
+    signal.signal(signal.SIGTERM, _graceful)
+    signal.signal(signal.SIGINT, _graceful)
+    log.info("schedule.start", steps=[s.name for s in steps], every=every, offset=offset)
+    try:
+        scheduler.run_forever(run_now=run_now)
+    finally:
+        heartbeat.close()
 
 
 def main() -> None:  # pragma: no cover

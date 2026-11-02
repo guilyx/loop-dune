@@ -34,6 +34,9 @@ class Settings(BaseSettings):
 
     migrations_dir: Path | None = None
 
+    #: Dead-man's switch pinged after each `schedule` cycle (``<url>`` / ``<url>/fail``).
+    heartbeat_url: str | None = None
+
     log_level: str = "INFO"
     log_format: Literal["auto", "json", "console"] = "auto"
 
