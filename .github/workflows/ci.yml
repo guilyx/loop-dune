@@ -67,10 +67,12 @@ jobs:
       - run: npm run build
 
   deploy-config:
-    name: Deploy config (shellcheck, compose, Caddyfile)
+    name: Config lint (workflows, shellcheck, compose, Caddyfile)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+      - name: actionlint
+        run: docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:1.7.12 -color
       - name: shellcheck
         run: shellcheck -x -P SCRIPTDIR deploy/backup/*.sh deploy/vps/*.sh deploy/vps/initdb/*.sh
       - name: VPS compose file renders
@@ -124,7 +126,7 @@ jobs:
         run: docker run --rm --network host -e DATABASE_URL loop-backup:ci roundtrip
 
   images:
-    name: Docker images build
+    name: Docker images (build and smoke test)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -133,14 +135,31 @@ jobs:
         with:
           context: .
           file: indexer/Dockerfile
-          push: false
+          load: true
           tags: loop-indexer:ci
           cache-from: type=gha,scope=indexer
           cache-to: type=gha,mode=max,scope=indexer
+      # A build can succeed with a broken runtime (e.g. packages built for another
+      # Python), so start each image and exercise it.
+      - name: Indexer image starts and loads its registry
+        run: |
+          docker run --rm loop-indexer:ci --help > /dev/null
+          docker run --rm loop-indexer:ci registry show | tail -n 3
       - uses: docker/build-push-action@v7
         with:
           context: dashboard
-          push: false
+          load: true
           tags: loop-dashboard:ci
           cache-from: type=gha,scope=dashboard
           cache-to: type=gha,mode=max,scope=dashboard
+      - name: Dashboard image serves pages and the API
+        run: |
+          docker run -d --name dashboard -p 3000:3000 loop-dashboard:ci
+          for _ in $(seq 1 30); do curl -fsS -o /dev/null http://localhost:3000/ && break; sleep 1; done
+          curl -fsS http://localhost:3000/api/markets | jq -e '.markets | length > 0' > /dev/null
+          curl -fsS -o /dev/null http://localhost:3000/markets/eth
+          curl -fsS -o "$RUNNER_TEMP/eth.csv" "http://localhost:3000/api/markets/eth?format=csv"
+          head -n 2 "$RUNNER_TEMP/eth.csv"
+      - name: Dashboard logs
+        if: always()
+        run: docker logs dashboard 2>&1 | tail -n 50 || true
