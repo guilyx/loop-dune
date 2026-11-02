@@ -19,11 +19,11 @@ flowchart LR
 
 | Piece | Where | Runs on |
 |---|---|---|
-| Indexer (Python) | `indexer/` | GitHub Actions cron (or any container host) |
-| Schema + views | `supabase/migrations/` | Supabase Postgres (or any Postgres ≥ 14) |
+| Indexer (Python) | `indexer/` | GitHub Actions cron, or `loop-indexer schedule` on a VPS ([vps.md](vps.md)) |
+| Schema + views | `supabase/migrations/` | Supabase, or the VPS Postgres container (any Postgres ≥ 14) |
 | Dune export | `loop-indexer export dune` | same job, after indexing |
 | Dune queries | `dune/queries/` | Dune |
-| Dashboard | `dashboard/` | Vercel (or the bundled Docker image) |
+| Dashboard | `dashboard/` | Vercel, or the Docker image behind Caddy on a VPS |
 
 ## Decisions
 

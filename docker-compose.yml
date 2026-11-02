@@ -5,6 +5,8 @@
 #   docker compose run --rm indexer db migrate
 #   docker compose run --rm indexer run --interval 1d     # quick backfill
 #   docker compose --profile scheduler up -d scheduler    # hourly loop, like CI cron
+#
+# For a production server, use deploy/vps/ instead (HTTPS, backups, read-only roles).
 name: loop
 
 services:
@@ -37,15 +39,8 @@ services:
     environment:
       DATABASE_URL: postgresql://loop:loop@db:5432/loop
     depends_on: { db: { condition: service_healthy } }
-    entrypoint: ["/bin/sh", "-c"]
-    command:
-      - |
-        loop-indexer db migrate
-        while true; do
-          loop-indexer run
-          if [ -n "$$DUNE_API_KEY" ]; then loop-indexer export dune; fi
-          sleep 3600
-        done
+    command: ["schedule"]   # migrate, then index -> Dune -> health every hour at :17
+    stop_grace_period: 2m
     restart: unless-stopped
     profiles: [scheduler]
 

@@ -66,8 +66,26 @@ jobs:
       - run: npm test
       - run: npm run build
 
+  deploy-config:
+    name: Deploy config (shellcheck, compose, Caddyfile)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: shellcheck
+        run: shellcheck -x -P SCRIPTDIR deploy/backup/*.sh deploy/vps/*.sh deploy/vps/initdb/*.sh
+      - name: VPS compose file renders
+        run: |
+          sed -e 's/^\(POSTGRES_PASSWORD\|DASHBOARD_DB_PASSWORD\|ETH_RPC_URLS\|BSC_RPC_URLS\)=$/\1=ci/' \
+            deploy/vps/.env.example > "$RUNNER_TEMP/vps.env"
+          docker compose -f deploy/vps/docker-compose.yml --env-file "$RUNNER_TEMP/vps.env" config --quiet
+      - name: Caddyfile is valid
+        run: |
+          docker run --rm -e DOMAIN=loop.example.com -e ACME_EMAIL=ci@example.com \
+            -v "$PWD/deploy/vps/Caddyfile:/etc/caddy/Caddyfile:ro" caddy:2.8-alpine \
+            caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+
   backups:
-    name: Backups (shellcheck, image, restore round trip)
+    name: Backups (image, restore round trip)
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -84,8 +102,6 @@ jobs:
       DATABASE_URL: postgresql://loop:loop@localhost:5432/loop_ci
     steps:
       - uses: actions/checkout@v5
-      - name: shellcheck
-        run: shellcheck -x -P SCRIPTDIR deploy/backup/*.sh deploy/vps/*.sh
       - uses: astral-sh/setup-uv@v6
         with:
           enable-cache: true

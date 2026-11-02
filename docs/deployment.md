@@ -1,8 +1,21 @@
 # Deployment
 
 Everything needed to host the stack is in this repository. Nothing is deployed by
-default: the hourly workflow stays off until you enable it. Budget about an hour. The
-running costs are an archive RPC plan and, for the full hourly history, Supabase Pro.
+default: every scheduled workflow stays off until you enable it. Two ways to host it:
+
+| | Managed (this page) | One VPS ([vps.md](vps.md)) |
+|---|---|---|
+| Database | Supabase | Postgres container |
+| Hourly indexer | GitHub Actions cron | `loop-indexer schedule` container |
+| Dashboard | Vercel | Container behind Caddy (auto HTTPS) |
+| Backups | Supabase's own (Pro: daily) | Encrypted `pg_dump` to S3, drilled weekly ([backups.md](backups.md)) |
+| Cost | RPC plan + Supabase Pro for the full hourly history | RPC plan + a ~€5/month server + a few cents of storage |
+| Ops | None | Docker host to keep patched (automated by `bootstrap.sh`) |
+
+Pick one. Running both against different databases would export the same hours to
+Dune twice (harmless for the queries, which de-duplicate, but wasteful).
+
+The rest of this page is the managed setup. Budget about an hour.
 
 | Component | Service | Free tier enough? |
 |---|---|---|
@@ -65,6 +78,10 @@ Then:
    * `DATABASE_URL`: the pooled string for the `dashboard` login (`?sslmode=require` is implied).
    * `NEXT_PUBLIC_DUNE_NAMESPACE`: optional, shown on the Data page.
 3. Deploy. Pages revalidate hourly.
+4. Optional, for instant refreshes: set `REVALIDATE_TOKEN` (any long random string) in
+   Vercel, and in GitHub the secret `REVALIDATE_TOKEN` plus the variable
+   `DASHBOARD_REVALIDATE_URL=https://<your-app>/api/revalidate`. The indexer workflow
+   then rebuilds the pages right after each run.
 
 Without `DATABASE_URL`, the dashboard serves the static snapshot in `dashboard/data/`.
 That is how preview deployments and forks work. Refresh the snapshot with
@@ -82,18 +99,19 @@ With `DUNE_API_KEY` and `DUNE_NAMESPACE` set, every indexer run:
 Create queries from `dune/queries/` and set their `namespace` parameter. See
 [`dune/README.md`](../dune/README.md).
 
-## Alternative: container host
+## Other container hosts
 
-```bash
-docker build -f indexer/Dockerfile -t loop-indexer .
-docker run --env-file .env loop-indexer db migrate
-docker run --env-file .env loop-indexer run
-```
+The images on GHCR (`loop-dune-indexer`, `loop-dune-dashboard`, `loop-dune-backup`, see
+[vps.md](vps.md#images)) run anywhere:
 
-Schedule `run` (then `export dune`) hourly with the platform's cron, for example a
-Railway or Fly.io scheduled machine, or a Kubernetes CronJob. The dashboard has a
-standalone image too: `docker build -t loop-dashboard dashboard/`.
-`docker-compose.yml` runs the full stack locally.
+* **Long-running** (a VPS, Fly.io machine, Kubernetes Deployment): run the indexer as
+  `loop-indexer schedule`. It migrates on start, runs every hour at :17, survives
+  failing steps, stops cleanly on SIGTERM and pings `HEARTBEAT_URL` after each cycle.
+* **Platform cron** (Railway cron, Kubernetes CronJob, Cloud Run jobs): run
+  `loop-indexer run`, then `loop-indexer export dune`, hourly.
+
+`docker-compose.yml` at the root runs the full stack locally; `deploy/vps/` is the
+production version.
 
 ## Operations runbook
 
