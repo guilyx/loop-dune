@@ -48,8 +48,9 @@ Then:
 
 1. Run **Actions → Indexer → Run workflow** with interval `1d` once for a fast first
    backfill (about 1.5k snapshots).
-2. Run it again with `1h`. This fills the remaining ~35k hourly points; with a paid RPC
-   it takes tens of minutes and resumes where it stopped if interrupted.
+2. Run it again with `1h`. This fills the remaining ~35k hourly points. Every snapshot
+   is committed as soon as it is read, so if a run hits the job's 50-minute timeout or
+   the RPC's rate limits, just run it again: it resumes at the first missing hour.
 3. Set `INDEXER_ENABLED=true`. From then on, each hourly run snapshots the hours it
    finds missing, appends them to Dune and fails if any chain is more than 3 hours behind.
 
