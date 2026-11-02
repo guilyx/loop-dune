@@ -40,6 +40,30 @@ export interface SeriesMeta {
   call: string;
 }
 
+export interface ChainHealth {
+  chainId: number;
+  firstDay: string;
+  lastDay: string;
+  days: number;
+  /** share of calendar days with at least one snapshot */
+  coverage: number | null;
+  snapshots: number;
+  failedCalls: number;
+  maxBlockLagSeconds: number | null;
+}
+
+export interface SeriesHealth {
+  series_id: string;
+  observations: number;
+  reverted: number;
+  lastObserved: string | null;
+}
+
+export interface Health {
+  chains: ChainHealth[];
+  reverting: SeriesHealth[];
+}
+
 export interface Meta {
   source: "postgres" | "static";
   generatedAt: string;
@@ -48,6 +72,7 @@ export interface Meta {
   freshness: Record<string, string>;
   markets: MarketMeta[];
   series: SeriesMeta[];
+  health?: Health;
 }
 
 type Num = number | null;
@@ -82,12 +107,62 @@ export interface VaultPoint {
   debt_ceiling: Num;
   pool_borrowed: Num;
   ltv: Num;
+  liquidation_ratio: Num;
+  liquidation_penalty: Num;
+  max_ltv: Num;
+  /** LTV x liquidation ratio: >= 1 means liquidatable at the vault's oracle */
+  capacity_used: Num;
+  /** collateral price fall that would make the aggregate position liquidatable */
+  drop_to_liquidation: Num;
+}
+
+/** loop.market_yield_daily */
+export interface YieldPoint {
+  day: string;
+  realized_apy_7d: Num;
+  realized_apy_30d: Num;
+  realized_apy_90d: Num;
+  pass_through: Num;
+}
+
+/** loop.market_flows_daily: tvl_change = interest + net_flow */
+export interface FlowPoint {
+  day: string;
+  tvl_change: Num;
+  interest: Num;
+  net_flow: Num;
+  borrow_change: Num;
+}
+
+/** loop.market_concentration_daily */
+export interface ConcentrationPoint {
+  day: string;
+  debt_hhi: Num;
+  top_vault_share: Num;
+  borrowing_vaults: Num;
+}
+
+export interface OracleEvent {
+  vault: string;
+  day: string;
+  kind: "move" | "reverted";
+  from: Num;
+  to: Num;
+  change: Num;
+}
+
+export interface MarketAnalytics {
+  yield: YieldPoint[];
+  flows: FlowPoint[];
+  concentration: ConcentrationPoint[];
+  oracleEvents: OracleEvent[];
 }
 
 export interface MarketData {
   market: string;
   daily: MarketPoint[];
   vaults: Record<string, VaultPoint[]>;
+  analytics?: MarketAnalytics;
 }
 
 export interface DataSource {

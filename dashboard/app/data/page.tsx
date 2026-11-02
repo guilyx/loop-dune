@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 
-import { day } from "@/lib/format";
+import { day, percent } from "@/lib/format";
 import { getMeta } from "@/lib/data";
 
 export const metadata: Metadata = { title: "Data" };
 export const revalidate = 3600;
+
+const CHAIN_NAMES: Record<number, string> = { 1: "Ethereum", 56: "BNB Smart Chain" };
 
 const VIEWS: [string, string][] = [
   ["loop.observations", "Fact table: one row per (series, hour) with the exact uint256 (raw) and the scaled value."],
@@ -12,6 +14,11 @@ const VIEWS: [string, string][] = [
   ["loop.vault_hourly", "One row per vault and hour: collateral, oracle price, collateral value, debt, ceiling, LTV."],
   ["loop.market_daily / loop.vault_daily", "End-of-day versions of the two views above."],
   ["loop.series", "How every value is read: contract, function, arguments, decimals, unit."],
+  ["loop.market_yield_daily", "Realized lender APY (7/30/90 days, from share price) vs quoted rates; pass-through."],
+  ["loop.market_flows_daily", "Daily TVL change split exactly into interest accrued and net deposits; borrow change."],
+  ["loop.vault_share_daily / loop.market_concentration_daily", "Each vault's share of debt and collateral; HHI of debt."],
+  ["loop.oracle_daily", "Day-over-day collateral price changes per vault."],
+  ["loop.coverage_daily / loop.series_health", "Snapshots and reverted calls per chain-day; observations and reverts per series."],
   ["loop.chain_freshness", "Latest snapshot and lag per chain; what the health check alerts on."],
 ];
 
@@ -58,6 +65,56 @@ GET /api/markets/eth?format=csv`}</pre>
           </p>
         </div>
       </div>
+
+      {meta.health && (
+        <section className="section">
+          <h2>Data health</h2>
+          <p className="hint">
+            Coverage of the sampling grid per chain, and every series whose on-chain call reverted at least once
+            (recorded as missing, never as zero).
+          </p>
+          <div className="grid grid-4">
+            {meta.health.chains.map((c) => (
+              <div className="card" key={c.chainId}>
+                <div className="stat-label">{CHAIN_NAMES[c.chainId] ?? `Chain ${c.chainId}`}</div>
+                <div className="stat-value">{percent(c.coverage, 1)}</div>
+                <div className="stat-delta">
+                  of days covered · {c.days.toLocaleString("en-US")} days, {c.snapshots.toLocaleString("en-US")}{" "}
+                  snapshots
+                </div>
+                <div className="stat-delta">
+                  {day(c.firstDay)} – {day(c.lastDay)} · {c.failedCalls.toLocaleString("en-US")} reverted calls ·
+                  block ≤ {c.maxBlockLagSeconds ?? "–"}s before grid time
+                </div>
+              </div>
+            ))}
+          </div>
+          {meta.health.reverting.length > 0 && (
+            <div className="card table-wrap" style={{ marginTop: 16 }}>
+              <table className="data">
+                <thead>
+                  <tr>
+                    <th>Series</th>
+                    <th className="num">Observations</th>
+                    <th className="num">Reverted snapshots</th>
+                    <th className="num">Last observed</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {meta.health.reverting.map((s) => (
+                    <tr key={s.series_id}>
+                      <td><code>{s.series_id}</code></td>
+                      <td className="num">{s.observations.toLocaleString("en-US")}</td>
+                      <td className="num">{s.reverted.toLocaleString("en-US")}</td>
+                      <td className="num">{s.lastObserved ? day(s.lastObserved) : "never"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+      )}
 
       <section className="section">
         <h2>Postgres views</h2>

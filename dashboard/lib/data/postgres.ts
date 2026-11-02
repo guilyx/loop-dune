@@ -2,6 +2,7 @@ import postgres from "postgres";
 
 import type {
   DataSource,
+  MarketAnalytics,
   MarketData,
   MarketMeta,
   MarketPoint,
@@ -22,8 +23,16 @@ const MARKET_COLUMNS = [
 ] as const;
 const VAULT_COLUMNS = [
   "collateral_balance", "spot_price", "collateral_value", "total_debt", "debt_ceiling",
-  "pool_borrowed", "ltv",
+  "pool_borrowed", "ltv", "liquidation_ratio", "liquidation_penalty", "max_ltv",
+  "capacity_used", "drop_to_liquidation",
 ] as const;
+// Mirrors ANALYTICS in indexer/src/loop_indexer/exporters/static.py.
+const ANALYTICS = {
+  yield: ["loop.market_yield_daily", ["realized_apy_7d", "realized_apy_30d", "realized_apy_90d", "pass_through"]],
+  flows: ["loop.market_flows_daily", ["tvl_change", "interest", "net_flow", "borrow_change"]],
+  concentration: ["loop.market_concentration_daily", ["debt_hhi", "top_vault_share", "borrowing_vaults"]],
+} as const;
+const ORACLE_MOVE_THRESHOLD = 0.2;
 
 type Row = Record<string, unknown>;
 
@@ -54,6 +63,16 @@ export class PostgresSource implements DataSource {
                contract_address, function_signature
         from loop.series order by series_id`,
       this.sql<Row[]>`select chain_id, last_snapshot from loop.chain_freshness`,
+    ]);
+    const [coverage, reverting] = await Promise.all([
+      this.sql<Row[]>`
+        select chain_id, min(day) as first_day, max(day) as last_day, count(*) as days,
+               sum(snapshots) as snapshots, sum(failed_calls) as failed_calls,
+               max(max_block_lag_seconds) as max_lag
+        from loop.coverage_daily group by chain_id order by chain_id`,
+      this.sql<Row[]>`
+        select series_id, observations, reverted, last_observed from loop.series_health
+        where reverted > 0 order by reverted desc, series_id`,
     ]);
     const marketMeta: MarketMeta[] = markets.map((m) => {
       const chainId = Number(m.chain_id);
@@ -98,6 +117,29 @@ export class PostgresSource implements DataSource {
         freshness.map((f) => [String(f.chain_id), new Date(f.last_snapshot as string).toISOString()]),
       ),
       markets: marketMeta,
+      health: {
+        chains: coverage.map((c) => {
+          const first = new Date(c.first_day as string);
+          const last = new Date(c.last_day as string);
+          const span = Math.round((last.getTime() - first.getTime()) / 86_400_000) + 1;
+          return {
+            chainId: Number(c.chain_id),
+            firstDay: isoDay(c.first_day),
+            lastDay: isoDay(c.last_day),
+            days: Number(c.days),
+            coverage: span > 0 ? Number(c.days) / span : null,
+            snapshots: Number(c.snapshots),
+            failedCalls: Number(c.failed_calls ?? 0),
+            maxBlockLagSeconds: num(c.max_lag),
+          };
+        }),
+        reverting: reverting.map((r) => ({
+          series_id: String(r.series_id),
+          observations: Number(r.observations),
+          reverted: Number(r.reverted),
+          lastObserved: r.last_observed ? new Date(r.last_observed as string).toISOString() : null,
+        })),
+      },
       series: series.map(
         (s): SeriesMeta => ({
           series_id: String(s.series_id),
@@ -126,8 +168,40 @@ export class PostgresSource implements DataSource {
       for (const c of VAULT_COLUMNS) point[c] = num(row[c]);
       (byVault[String(row.vault_id)] ??= []).push(point);
     }
+    const analytics: Record<string, unknown[]> = {};
+    for (const [key, [view, columns]] of Object.entries(ANALYTICS)) {
+      // `view` comes from the constant map above (never user input); the id is bound.
+      const rows = (await this.sql.unsafe(
+        `select * from ${view} where market_id = $1 order by day`,
+        [id],
+      )) as Row[];
+      analytics[key] = rows.map((r) => {
+        const point: Record<string, unknown> = { day: isoDay(r.day) };
+        for (const c of columns) point[c] = num(r[c]);
+        return point;
+      });
+    }
+    const oracle = await this.sql<Row[]>`
+      select vault_id, day, spot_price, prev_spot_price, spot_change from loop.oracle_daily
+      where market_id = ${id}
+        and (abs(spot_change) >= ${ORACLE_MOVE_THRESHOLD}
+             or (spot_price is null and prev_spot_price is not null))
+      order by day, vault_id`;
     return {
       market: id,
+      analytics: {
+        yield: analytics.yield as MarketAnalytics["yield"],
+        flows: analytics.flows as MarketAnalytics["flows"],
+        concentration: analytics.concentration as MarketAnalytics["concentration"],
+        oracleEvents: oracle.map((r) => ({
+          vault: String(r.vault_id),
+          day: isoDay(r.day),
+          kind: r.spot_price === null ? "reverted" : "move",
+          from: num(r.prev_spot_price),
+          to: num(r.spot_price),
+          change: num(r.spot_change),
+        })),
+      },
       daily: daily.map((row) => {
         const point = { day: isoDay(row.day) } as MarketPoint;
         for (const c of MARKET_COLUMNS) point[c] = num(row[c]);

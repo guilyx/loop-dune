@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { MarketView } from "@/components/MarketView";
+import { weeklyLast } from "@/lib/analytics";
 import { shortAddress } from "@/lib/format";
 import { getMarket, getMeta } from "@/lib/data";
 
@@ -60,6 +61,17 @@ export default async function MarketPage({ params }: Params) {
             return [v.id, points[points.length - 1]];
           }),
         )}
+        weekly={Object.fromEntries(
+          market.vaults.map((v) => [
+            v.id,
+            weeklyLast(data.vaults[v.id] ?? []).map((p) => ({
+              day: p.day,
+              total_debt: p.total_debt,
+              capacity_used: p.capacity_used,
+            })),
+          ]),
+        )}
+        analytics={data.analytics}
       />
     </>
   );

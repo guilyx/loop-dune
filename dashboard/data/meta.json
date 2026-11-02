@@ -1,9 +1,65 @@
 {
- "generatedAt": "2026-11-02T11:55:06+00:00",
+ "generatedAt": "2026-11-02T19:00:19+00:00",
  "resolution": "1d",
  "freshness": {
   "1": "2026-11-02T00:00:00+00:00",
   "56": "2026-11-02T00:00:00+00:00"
+ },
+ "health": {
+  "chains": [
+   {
+    "chainId": 1,
+    "firstDay": "2024-10-10",
+    "lastDay": "2026-11-02",
+    "days": 754,
+    "coverage": 1,
+    "snapshots": 757,
+    "failedCalls": 367,
+    "maxBlockLagSeconds": 13
+   },
+   {
+    "chainId": 56,
+    "firstDay": "2024-12-07",
+    "lastDay": "2026-11-02",
+    "days": 696,
+    "coverage": 1,
+    "snapshots": 699,
+    "failedCalls": 1,
+    "maxBlockLagSeconds": 2
+   }
+  ],
+  "reverting": [
+   {
+    "series_id": "usd.vault.spectra-sdeusd.spot_price",
+    "observations": 235,
+    "reverted": 360,
+    "lastObserved": "2025-11-07T00:00:00+00:00"
+   },
+   {
+    "series_id": "eth.vault.pendle-teth-jan26.spot_price",
+    "observations": 510,
+    "reverted": 5,
+    "lastObserved": "2026-11-02T00:00:00+00:00"
+   },
+   {
+    "series_id": "bnb.vault.pendle-clisbnb-apr25.spot_price",
+    "observations": 633,
+    "reverted": 1,
+    "lastObserved": "2026-11-02T00:00:00+00:00"
+   },
+   {
+    "series_id": "eth.vault.pendle-rsweth-jun25.spot_price",
+    "observations": 579,
+    "reverted": 1,
+    "lastObserved": "2026-11-02T00:00:00+00:00"
+   },
+   {
+    "series_id": "eth.vault.pendle-unieth-jun25.spot_price",
+    "observations": 579,
+    "reverted": 1,
+    "lastObserved": "2026-11-02T00:00:00+00:00"
+   }
+  ]
  },
  "markets": [
   {
@@ -425,6 +481,28 @@
    "call": "balanceOf(address)"
   },
   {
+   "series_id": "eth.vault.spectra-yneth-v1.liquidation_ratio",
+   "market_id": "eth",
+   "entity_type": "vault",
+   "entity_id": "spectra-yneth-v1",
+   "metric": "liquidation_ratio",
+   "unit": "ratio",
+   "description": "Minimum collateral value / debt before a position can be liquidated.",
+   "contract": "0x7fC6f72E895F1ed110799f5d6594149e4A0B7Ff3",
+   "call": "vaultConfig()"
+  },
+  {
+   "series_id": "eth.vault.spectra-yneth-v1.liquidation_penalty",
+   "market_id": "eth",
+   "entity_type": "vault",
+   "entity_id": "spectra-yneth-v1",
+   "metric": "liquidation_penalty",
+   "unit": "ratio",
+   "description": "Share of repaid debt credited on liquidation (1 - penalty), WAD on-chain.",
+   "contract": "0x7fC6f72E895F1ed110799f5d6594149e4A0B7Ff3",
+   "call": "liquidationConfig()"
+  },
+  {
    "series_id": "eth.vault.spectra-yneth-v1.debt_ceiling",
    "market_id": "eth",
    "entity_type": "vault",
@@ -478,6 +556,28 @@
    "description": "Collateral tokens held by the vault.",
    "contract": "0x2408569177553A427dd6956E1717f2fBE1a96F1D",
    "call": "balanceOf(address)"
+  },
+  {
+   "series_id": "eth.vault.spectra-yneth.liquidation_ratio",
+   "market_id": "eth",
+   "entity_type": "vault",
+   "entity_id": "spectra-yneth",
+   "metric": "liquidation_ratio",
+   "unit": "ratio",
+   "description": "Minimum collateral value / debt before a position can be liquidated.",
+   "contract": "0x9BfCD3788f923186705259ae70A1192F601BeB47",
+   "call": "vaultConfig()"
+  },
+  {
+   "series_id": "eth.vault.spectra-yneth.liquidation_penalty",
+   "market_id": "eth",
+   "entity_type": "vault",
+   "entity_id": "spectra-yneth",
+   "metric": "liquidation_penalty",
+   "unit": "ratio",
+   "description": "Share of repaid debt credited on liquidation (1 - penalty), WAD on-chain.",
+   "contract": "0x9BfCD3788f923186705259ae70A1192F601BeB47",
+   "call": "liquidationConfig()"
   },
   {
    "series_id": "eth.vault.spectra-yneth.debt_ceiling",
@@ -535,6 +635,28 @@
    "call": "balanceOf(address)"
   },
   {
+   "series_id": "eth.vault.spectra-ynethx.liquidation_ratio",
+   "market_id": "eth",
+   "entity_type": "vault",
+   "entity_id": "spectra-ynethx",
+   "metric": "liquidation_ratio",
+   "unit": "ratio",
+   "description": "Minimum collateral value / debt before a position can be liquidated.",
+   "contract": "0x9c5EE26b9623cA864693C575a8fBc8933ae964E7",
+   "call": "vaultConfig()"
+  },
+  {
+   "series_id": "eth.vault.spectra-ynethx.liquidation_penalty",
+   "market_id": "eth",
+   "entity_type": "vault",
+   "entity_id": "spectra-ynethx",
+   "metric": "liquidation_penalty",
+   "unit": "ratio",
+   "description": "Share of repaid debt credited on liquidation (1 - penalty), WAD on-chain.",
+   "contract": "0x9c5EE26b9623cA864693C575a8fBc8933ae964E7",
+   "call": "liquidationConfig()"
+  },
+  {
    "series_id": "eth.vault.spectra-ynethx.debt_ceiling",
    "market_id": "eth",
    "entity_type": "vault",
@@ -588,6 +710,28 @@
    "description": "Collateral tokens held by the vault.",
    "contract": "0xBDb8F9729d3194f75fD1A3D9bc4FFe0DDe3A404c",
    "call": "balanceOf(address)"
+  },
+  {
+   "series_id": "eth.vault.pendle-teth-may25.liquidation_ratio",
+   "market_id": "eth",
+   "entity_type": "vault",
+   "entity_id": "pendle-teth-may25",
+   "metric": "liquidation_ratio",
+   "unit": "ratio",
+   "description": "Minimum collateral value / debt before a position can be liquidated.",
+   "contract": "0x1438F04666C48957b1D7673684e4a1E505c80aF6",
+   "call": "vaultConfig()"
+  },
+  {
+   "series_id": "eth.vault.pendle-teth-may25.liquidation_penalty",
+   "market_id": "eth",
+   "entity_type": "vault",
+   "entity_id": "pendle-teth-may25",
+   "metric": "liquidation_penalty",
+   "unit": "ratio",
+   "description": "Share of repaid debt credited on liquidation (1 - penalty), WAD on-chain.",
+   "contract": "0x1438F04666C48957b1D7673684e4a1E505c80aF6",
+   "call": "liquidationConfig()"
   },
   {
    "series_id": "eth.vault.pendle-teth-may25.debt_ceiling",
@@ -645,6 +789,28 @@
    "call": "balanceOf(address)"
   },
   {
+   "series_id": "eth.vault.pendle-unieth-jun25.liquidation_ratio",
+   "market_id": "eth",
+   "entity_type": "vault",
+   "entity_id": "pendle-unieth-jun25",
+   "metric": "liquidation_ratio",
+   "unit": "ratio",
+   "description": "Minimum collateral value / debt before a position can be liquidated.",
+   "contract": "0x7A0734Fa26e188483aae3d4332F19404FEA87832",
+   "call": "vaultConfig()"
+  },
+  {
+   "series_id": "eth.vault.pendle-unieth-jun25.liquidation_penalty",
+   "market_id": "eth",
+   "entity_type": "vault",
+   "entity_id": "pendle-unieth-jun25",
+   "metric": "liquidation_penalty",
+   "unit": "ratio",
+   "description": "Share of repaid debt credited on liquidation (1 - penalty), WAD on-chain.",
+   "contract": "0x7A0734Fa26e188483aae3d4332F19404FEA87832",
+   "call": "liquidationConfig()"
+  },
+  {
    "series_id": "eth.vault.pendle-unieth-jun25.debt_ceiling",
    "market_id": "eth",
    "entity_type": "vault",
@@ -698,6 +864,28 @@
    "description": "Collateral tokens held by the vault.",
    "contract": "0xfd5Cf95E8b886aCE955057cA4DC69466e793FBBE",
    "call": "balanceOf(address)"
+  },
+  {
+   "series_id": "eth.vault.pendle-rsweth-jun25.liquidation_ratio",
+   "market_id": "eth",
+   "entity_type": "vault",
+   "entity_id": "pendle-rsweth-jun25",
+   "metric": "liquidation_ratio",
+   "unit": "ratio",
+   "description": "Minimum collateral value / debt before a position can be liquidated.",
+   "contract": "0x868527fd3Fad53149be0e75eEeaBE4f008D27E81",
+   "call": "vaultConfig()"
+  },
+  {
+   "series_id": "eth.vault.pendle-rsweth-jun25.liquidation_penalty",
+   "market_id": "eth",
+   "entity_type": "vault",
+   "entity_id": "pendle-rsweth-jun25",
+   "metric": "liquidation_penalty",
+   "unit": "ratio",
+   "description": "Share of repaid debt credited on liquidation (1 - penalty), WAD on-chain.",
+   "contract": "0x868527fd3Fad53149be0e75eEeaBE4f008D27E81",
+   "call": "liquidationConfig()"
   },
   {
    "series_id": "eth.vault.pendle-rsweth-jun25.debt_ceiling",
@@ -755,6 +943,28 @@
    "call": "balanceOf(address)"
   },
   {
+   "series_id": "eth.vault.pendle-pufeth-jun25.liquidation_ratio",
+   "market_id": "eth",
+   "entity_type": "vault",
+   "entity_id": "pendle-pufeth-jun25",
+   "metric": "liquidation_ratio",
+   "unit": "ratio",
+   "description": "Minimum collateral value / debt before a position can be liquidated.",
+   "contract": "0x314A8cB19b5F245C7f109f50F4FaA06cD70C7Aa4",
+   "call": "vaultConfig()"
+  },
+  {
+   "series_id": "eth.vault.pendle-pufeth-jun25.liquidation_penalty",
+   "market_id": "eth",
+   "entity_type": "vault",
+   "entity_id": "pendle-pufeth-jun25",
+   "metric": "liquidation_penalty",
+   "unit": "ratio",
+   "description": "Share of repaid debt credited on liquidation (1 - penalty), WAD on-chain.",
+   "contract": "0x314A8cB19b5F245C7f109f50F4FaA06cD70C7Aa4",
+   "call": "liquidationConfig()"
+  },
+  {
    "series_id": "eth.vault.pendle-pufeth-jun25.debt_ceiling",
    "market_id": "eth",
    "entity_type": "vault",
@@ -810,6 +1020,28 @@
    "call": "balanceOf(address)"
   },
   {
+   "series_id": "eth.vault.spectra-inwsteths.liquidation_ratio",
+   "market_id": "eth",
+   "entity_type": "vault",
+   "entity_id": "spectra-inwsteths",
+   "metric": "liquidation_ratio",
+   "unit": "ratio",
+   "description": "Minimum collateral value / debt before a position can be liquidated.",
+   "contract": "0x03d30243138D45383F02BCA884D42068523bdE22",
+   "call": "vaultConfig()"
+  },
+  {
+   "series_id": "eth.vault.spectra-inwsteths.liquidation_penalty",
+   "market_id": "eth",
+   "entity_type": "vault",
+   "entity_id": "spectra-inwsteths",
+   "metric": "liquidation_penalty",
+   "unit": "ratio",
+   "description": "Share of repaid debt credited on liquidation (1 - penalty), WAD on-chain.",
+   "contract": "0x03d30243138D45383F02BCA884D42068523bdE22",
+   "call": "liquidationConfig()"
+  },
+  {
    "series_id": "eth.vault.spectra-inwsteths.debt_ceiling",
    "market_id": "eth",
    "entity_type": "vault",
@@ -863,6 +1095,28 @@
    "description": "Collateral tokens held by the vault.",
    "contract": "0x3DAF20E46708E556570159Eaf98eeE53A1A5b8A4",
    "call": "balanceOf(address)"
+  },
+  {
+   "series_id": "eth.vault.pendle-teth-jan26.liquidation_ratio",
+   "market_id": "eth",
+   "entity_type": "vault",
+   "entity_id": "pendle-teth-jan26",
+   "metric": "liquidation_ratio",
+   "unit": "ratio",
+   "description": "Minimum collateral value / debt before a position can be liquidated.",
+   "contract": "0xb85095c4B18a7d16559A0bFd764F51F0d030587f",
+   "call": "vaultConfig()"
+  },
+  {
+   "series_id": "eth.vault.pendle-teth-jan26.liquidation_penalty",
+   "market_id": "eth",
+   "entity_type": "vault",
+   "entity_id": "pendle-teth-jan26",
+   "metric": "liquidation_penalty",
+   "unit": "ratio",
+   "description": "Share of repaid debt credited on liquidation (1 - penalty), WAD on-chain.",
+   "contract": "0xb85095c4B18a7d16559A0bFd764F51F0d030587f",
+   "call": "liquidationConfig()"
   },
   {
    "series_id": "eth.vault.pendle-teth-jan26.debt_ceiling",
@@ -1019,6 +1273,28 @@
    "call": "balanceOf(address)"
   },
   {
+   "series_id": "usd.vault.spectra-sdeusd.liquidation_ratio",
+   "market_id": "usd",
+   "entity_type": "vault",
+   "entity_id": "spectra-sdeusd",
+   "metric": "liquidation_ratio",
+   "unit": "ratio",
+   "description": "Minimum collateral value / debt before a position can be liquidated.",
+   "contract": "0xbb23b7ACdE2B3A2E6446B16Cd3Dd471b0d80342c",
+   "call": "vaultConfig()"
+  },
+  {
+   "series_id": "usd.vault.spectra-sdeusd.liquidation_penalty",
+   "market_id": "usd",
+   "entity_type": "vault",
+   "entity_id": "spectra-sdeusd",
+   "metric": "liquidation_penalty",
+   "unit": "ratio",
+   "description": "Share of repaid debt credited on liquidation (1 - penalty), WAD on-chain.",
+   "contract": "0xbb23b7ACdE2B3A2E6446B16Cd3Dd471b0d80342c",
+   "call": "liquidationConfig()"
+  },
+  {
    "series_id": "usd.vault.spectra-sdeusd.debt_ceiling",
    "market_id": "usd",
    "entity_type": "vault",
@@ -1072,6 +1348,28 @@
    "description": "Collateral tokens held by the vault.",
    "contract": "0xE93B4A93e80BD3065B290394264af5d82422ee70",
    "call": "balanceOf(address)"
+  },
+  {
+   "series_id": "usd.vault.pendle-eusde-aug25.liquidation_ratio",
+   "market_id": "usd",
+   "entity_type": "vault",
+   "entity_id": "pendle-eusde-aug25",
+   "metric": "liquidation_ratio",
+   "unit": "ratio",
+   "description": "Minimum collateral value / debt before a position can be liquidated.",
+   "contract": "0x16575edcB68613188D70b194b8FD89Df0f6eDFaE",
+   "call": "vaultConfig()"
+  },
+  {
+   "series_id": "usd.vault.pendle-eusde-aug25.liquidation_penalty",
+   "market_id": "usd",
+   "entity_type": "vault",
+   "entity_id": "pendle-eusde-aug25",
+   "metric": "liquidation_penalty",
+   "unit": "ratio",
+   "description": "Share of repaid debt credited on liquidation (1 - penalty), WAD on-chain.",
+   "contract": "0x16575edcB68613188D70b194b8FD89Df0f6eDFaE",
+   "call": "liquidationConfig()"
   },
   {
    "series_id": "usd.vault.pendle-eusde-aug25.debt_ceiling",
@@ -1129,6 +1427,28 @@
    "call": "balanceOf(address)"
   },
   {
+   "series_id": "usd.vault.pendle-syrupusdc-aug25.liquidation_ratio",
+   "market_id": "usd",
+   "entity_type": "vault",
+   "entity_id": "pendle-syrupusdc-aug25",
+   "metric": "liquidation_ratio",
+   "unit": "ratio",
+   "description": "Minimum collateral value / debt before a position can be liquidated.",
+   "contract": "0x18C15607C91C6FC51DB6429e7Fdf5f6165dEED83",
+   "call": "vaultConfig()"
+  },
+  {
+   "series_id": "usd.vault.pendle-syrupusdc-aug25.liquidation_penalty",
+   "market_id": "usd",
+   "entity_type": "vault",
+   "entity_id": "pendle-syrupusdc-aug25",
+   "metric": "liquidation_penalty",
+   "unit": "ratio",
+   "description": "Share of repaid debt credited on liquidation (1 - penalty), WAD on-chain.",
+   "contract": "0x18C15607C91C6FC51DB6429e7Fdf5f6165dEED83",
+   "call": "liquidationConfig()"
+  },
+  {
    "series_id": "usd.vault.pendle-syrupusdc-aug25.debt_ceiling",
    "market_id": "usd",
    "entity_type": "vault",
@@ -1182,6 +1502,28 @@
    "description": "Collateral tokens held by the vault.",
    "contract": "0x45F163E583D34b8E276445dd3Da9aE077D137d72",
    "call": "balanceOf(address)"
+  },
+  {
+   "series_id": "usd.vault.pendle-susdf-sep25.liquidation_ratio",
+   "market_id": "usd",
+   "entity_type": "vault",
+   "entity_id": "pendle-susdf-sep25",
+   "metric": "liquidation_ratio",
+   "unit": "ratio",
+   "description": "Minimum collateral value / debt before a position can be liquidated.",
+   "contract": "0x078DBC4815A13ACD3c6BB19fcdDdB4Aefd086137",
+   "call": "vaultConfig()"
+  },
+  {
+   "series_id": "usd.vault.pendle-susdf-sep25.liquidation_penalty",
+   "market_id": "usd",
+   "entity_type": "vault",
+   "entity_id": "pendle-susdf-sep25",
+   "metric": "liquidation_penalty",
+   "unit": "ratio",
+   "description": "Share of repaid debt credited on liquidation (1 - penalty), WAD on-chain.",
+   "contract": "0x078DBC4815A13ACD3c6BB19fcdDdB4Aefd086137",
+   "call": "liquidationConfig()"
   },
   {
    "series_id": "usd.vault.pendle-susdf-sep25.debt_ceiling",
@@ -1338,6 +1680,28 @@
    "call": "balanceOf(address)"
   },
   {
+   "series_id": "bnb.vault.pendle-clisbnb-apr25.liquidation_ratio",
+   "market_id": "bnb",
+   "entity_type": "vault",
+   "entity_id": "pendle-clisbnb-apr25",
+   "metric": "liquidation_ratio",
+   "unit": "ratio",
+   "description": "Minimum collateral value / debt before a position can be liquidated.",
+   "contract": "0x03C07e6d561b664246058974dB31dbF1c1C0B416",
+   "call": "vaultConfig()"
+  },
+  {
+   "series_id": "bnb.vault.pendle-clisbnb-apr25.liquidation_penalty",
+   "market_id": "bnb",
+   "entity_type": "vault",
+   "entity_id": "pendle-clisbnb-apr25",
+   "metric": "liquidation_penalty",
+   "unit": "ratio",
+   "description": "Share of repaid debt credited on liquidation (1 - penalty), WAD on-chain.",
+   "contract": "0x03C07e6d561b664246058974dB31dbF1c1C0B416",
+   "call": "liquidationConfig()"
+  },
+  {
    "series_id": "bnb.vault.pendle-clisbnb-apr25.debt_ceiling",
    "market_id": "bnb",
    "entity_type": "vault",
@@ -1391,6 +1755,28 @@
    "description": "Collateral tokens held by the vault.",
    "contract": "0xBD577dDABb5a1672d3C786726b87A175de652b96",
    "call": "balanceOf(address)"
+  },
+  {
+   "series_id": "bnb.vault.pendle-clisbnb-oct25.liquidation_ratio",
+   "market_id": "bnb",
+   "entity_type": "vault",
+   "entity_id": "pendle-clisbnb-oct25",
+   "metric": "liquidation_ratio",
+   "unit": "ratio",
+   "description": "Minimum collateral value / debt before a position can be liquidated.",
+   "contract": "0x3790Fbb57ae1bd0d39dA6b664e6a8010ec296822",
+   "call": "vaultConfig()"
+  },
+  {
+   "series_id": "bnb.vault.pendle-clisbnb-oct25.liquidation_penalty",
+   "market_id": "bnb",
+   "entity_type": "vault",
+   "entity_id": "pendle-clisbnb-oct25",
+   "metric": "liquidation_penalty",
+   "unit": "ratio",
+   "description": "Share of repaid debt credited on liquidation (1 - penalty), WAD on-chain.",
+   "contract": "0x3790Fbb57ae1bd0d39dA6b664e6a8010ec296822",
+   "call": "liquidationConfig()"
   },
   {
    "series_id": "bnb.vault.pendle-clisbnb-oct25.debt_ceiling",
@@ -1545,6 +1931,28 @@
    "description": "Collateral tokens held by the vault.",
    "contract": "0x132376b153d3cFf94615fe25712DB12CaAADf547",
    "call": "balanceOf(address)"
+  },
+  {
+   "series_id": "btc.vault.yncobtck.liquidation_ratio",
+   "market_id": "btc",
+   "entity_type": "vault",
+   "entity_id": "yncobtck",
+   "metric": "liquidation_ratio",
+   "unit": "ratio",
+   "description": "Minimum collateral value / debt before a position can be liquidated.",
+   "contract": "0xF0F67671151FF8B9F2117BD3ac7406D9D3ee8f45",
+   "call": "vaultConfig()"
+  },
+  {
+   "series_id": "btc.vault.yncobtck.liquidation_penalty",
+   "market_id": "btc",
+   "entity_type": "vault",
+   "entity_id": "yncobtck",
+   "metric": "liquidation_penalty",
+   "unit": "ratio",
+   "description": "Share of repaid debt credited on liquidation (1 - penalty), WAD on-chain.",
+   "contract": "0xF0F67671151FF8B9F2117BD3ac7406D9D3ee8f45",
+   "call": "liquidationConfig()"
   }
  ]
 }

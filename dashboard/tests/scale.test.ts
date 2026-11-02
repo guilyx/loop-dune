@@ -44,7 +44,8 @@ describe("insights", () => {
     } as unknown as MarketMeta;
     const vp = (day: string, ltv: number, debt: number) => ({
       day, ltv, total_debt: debt, collateral_balance: 1, spot_price: 1, collateral_value: 1,
-      debt_ceiling: 0, pool_borrowed: debt,
+      debt_ceiling: 0, pool_borrowed: debt, liquidation_ratio: 1.1, liquidation_penalty: 0.99,
+      max_ltv: 1 / 1.1, capacity_used: ltv * 1.1, drop_to_liquidation: 0,
     });
     const data: Record<string, MarketData> = {
       usd: { market: "usd", daily: [], vaults: { v: [vp("2025-06-19", 0.5, 1), vp("2025-06-20", 8e11, 121_504), vp("2025-07-01", 8e11, 120_009)] } },
