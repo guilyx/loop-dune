@@ -1,3 +1,0 @@
-recursive-include loop_dune/config/abis/eth *.json
-recursive-include loop_dune/config/abis/usd *.json
-recursive-include loop_dune/config/abis/bnb *.json

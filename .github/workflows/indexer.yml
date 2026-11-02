@@ -1,0 +1,81 @@
+name: Indexer
+
+# Hourly: snapshot every missing hour, append to Dune, check freshness.
+# Weekly: re-verify the contract registry against the chain (catches new vaults).
+#
+# Disabled until the repository variable INDEXER_ENABLED is set to "true".
+# Secrets: DATABASE_URL, ETH_RPC_URLS, BSC_RPC_URLS, DUNE_API_KEY (optional)
+# Variables: INDEXER_ENABLED, DUNE_NAMESPACE (optional)
+# See docs/deployment.md.
+
+on:
+  schedule:
+    - cron: "17 * * * *"   # hourly, off the top of the hour
+    - cron: "41 6 * * 1"   # weekly registry verification
+  workflow_dispatch:
+    inputs:
+      interval:
+        description: Sampling interval
+        default: 1h
+      full_dune_reload:
+        description: Clear and re-upload the Dune table
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: indexer
+  cancel-in-progress: false   # never interrupt a write; the next run catches up
+
+env:
+  DATABASE_URL: ${{ secrets.DATABASE_URL }}
+  ETH_RPC_URLS: ${{ secrets.ETH_RPC_URLS }}
+  BSC_RPC_URLS: ${{ secrets.BSC_RPC_URLS }}
+  DUNE_API_KEY: ${{ secrets.DUNE_API_KEY }}
+  DUNE_NAMESPACE: ${{ vars.DUNE_NAMESPACE }}
+  LOG_FORMAT: json
+
+jobs:
+  index:
+    if: >-
+      github.event_name == 'workflow_dispatch'
+      || (vars.INDEXER_ENABLED == 'true' && github.event.schedule != '41 6 * * 1')
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    defaults:
+      run:
+        working-directory: indexer
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: indexer/uv.lock
+      - run: uv sync --frozen --no-dev
+      - name: Migrate
+        run: uv run loop-indexer db migrate
+      - name: Index
+        run: uv run loop-indexer run --interval "${{ inputs.interval || '1h' }}"
+      - name: Export to Dune
+        if: ${{ !cancelled() && env.DUNE_API_KEY != '' && env.DUNE_NAMESPACE != '' }}
+        run: uv run loop-indexer export dune ${{ inputs.full_dune_reload && '--full' || '' }}
+      - name: Freshness
+        if: ${{ !cancelled() }}
+        run: uv run loop-indexer health --max-lag 3h
+
+  verify-registry:
+    if: >-
+      github.event_name == 'workflow_dispatch'
+      || (vars.INDEXER_ENABLED == 'true' && github.event.schedule == '41 6 * * 1')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: indexer
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v6
+      - run: uv sync --frozen --no-dev
+      - run: uv run loop-indexer registry verify

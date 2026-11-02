@@ -1,21 +1,60 @@
-version: '3.8'
+# Local stack: Postgres + indexer jobs + dashboard.
+#
+#   cp .env.example .env            # add archive RPC URLs
+#   docker compose up -d db dashboard
+#   docker compose run --rm indexer db migrate
+#   docker compose run --rm indexer run --interval 1d     # quick backfill
+#   docker compose --profile scheduler up -d scheduler    # hourly loop, like CI cron
+name: loop
 
 services:
-  loop-dune:
-    build: .
-    volumes:
-      - ./data:/app/data
-      - ./loop_dune/config/abis:/app/loop_dune/config/abis:ro
-    env_file:
-      - .env
-    restart: unless-stopped
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: loop
+      POSTGRES_PASSWORD: loop
+      POSTGRES_DB: loop
+    ports: ["5432:5432"]
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U loop -d loop"]
+      interval: 5s
+      retries: 10
 
-networks:
-  loop-network:
-    name: loop-network
-    driver: bridge
+  indexer:
+    build: { context: ., dockerfile: indexer/Dockerfile }
+    image: loop-indexer
+    env_file: [.env]
+    environment:
+      DATABASE_URL: postgresql://loop:loop@db:5432/loop
+    depends_on: { db: { condition: service_healthy } }
+    profiles: [jobs]
+
+  scheduler:
+    build: { context: ., dockerfile: indexer/Dockerfile }
+    image: loop-indexer
+    env_file: [.env]
+    environment:
+      DATABASE_URL: postgresql://loop:loop@db:5432/loop
+    depends_on: { db: { condition: service_healthy } }
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        loop-indexer db migrate
+        while true; do
+          loop-indexer run
+          if [ -n "$$DUNE_API_KEY" ]; then loop-indexer export dune; fi
+          sleep 3600
+        done
+    restart: unless-stopped
+    profiles: [scheduler]
+
+  dashboard:
+    build: { context: ./dashboard }
+    environment:
+      DATABASE_URL: postgresql://loop:loop@db:5432/loop
+    ports: ["3000:3000"]
+    depends_on: { db: { condition: service_healthy } }
+
+volumes:
+  pgdata:
