@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.7
 # Self-hosted alternative to Vercel. Build context: dashboard/
-FROM node:22-bookworm-slim AS build
+FROM node:26-bookworm-slim AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --no-audit --no-fund
@@ -11,7 +11,7 @@ ENV NEXT_OUTPUT=standalone NEXT_TELEMETRY_DISABLED=1 \
     NEXT_PUBLIC_DUNE_NAMESPACE=${NEXT_PUBLIC_DUNE_NAMESPACE}
 RUN npm run build
 
-FROM node:22-bookworm-slim
+FROM node:26-bookworm-slim
 WORKDIR /app
 ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 PORT=3000 HOSTNAME=0.0.0.0
 COPY --from=build --chown=node:node /app/.next/standalone ./
