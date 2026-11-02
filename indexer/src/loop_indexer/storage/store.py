@@ -178,6 +178,37 @@ class Store:
             )
             return [(r["block_number"], to_unix(r["block_timestamp"])) for r in cur.fetchall()]
 
+    def snapshots_missing_new_series(
+        self, chain_id: int, start: datetime, end: datetime
+    ) -> list[tuple[datetime, int, int]]:
+        """Snapshots taken before a series was registered that lack its observation.
+
+        Returned as (ts, block_number, unix block timestamp): the indexer re-reads them
+        at the stored block, so adding a metric backfills its history without any
+        timestamp-to-block resolution.
+        """
+        with self.conn.cursor() as cur:
+            cur.execute(
+                """
+                select s.ts, s.block_number, s.block_timestamp
+                from loop.snapshots s
+                where s.chain_id = %s and s.ts between %s and %s
+                  and exists (
+                    select 1 from loop.series se
+                    where se.chain_id = s.chain_id
+                      and se.created_at > s.ingested_at
+                      and se.active_from_block <= s.block_number
+                      and not exists (
+                        select 1 from loop.observations o
+                        where o.series_id = se.series_id and o.ts = s.ts))
+                order by s.ts
+                """,
+                (chain_id, start, end),
+            )
+            return [
+                (r["ts"], r["block_number"], to_unix(r["block_timestamp"])) for r in cur.fetchall()
+            ]
+
     def save_snapshot(self, snap: Snapshot) -> None:
         with self.transaction() as cur:
             if snap.observations:

@@ -371,6 +371,32 @@ def _vault_series(market: Market, vault: Vault, common: dict[str, Any]) -> Itera
         description="Collateral tokens held by the vault.",
         **base,
     )
+    yield Series(
+        series_id=f"{prefix}.liquidation_ratio",
+        metric="liquidation_ratio",
+        target=vault.address,
+        abi="cdp_vault",
+        function="vaultConfig",
+        args=(),
+        output_index=1,  # vaultConfig() -> (debtFloor, liquidationRatio)
+        decimals=WAD_DECIMALS,
+        unit="ratio",
+        description="Minimum collateral value / debt before a position can be liquidated.",
+        **base,
+    )
+    yield Series(
+        series_id=f"{prefix}.liquidation_penalty",
+        metric="liquidation_penalty",
+        target=vault.address,
+        abi="cdp_vault",
+        function="liquidationConfig",
+        args=(),
+        output_index=0,  # liquidationConfig() -> (liquidationPenalty, liquidationDiscount)
+        decimals=WAD_DECIMALS,
+        unit="ratio",
+        description="Share of repaid debt credited on liquidation (1 - penalty), WAD on-chain.",
+        **base,
+    )
     if vault.registered:
         yield Series(
             series_id=f"{prefix}.debt_ceiling",

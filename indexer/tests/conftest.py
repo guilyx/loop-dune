@@ -132,6 +132,8 @@ def build_chain(blocks: int = 3_000) -> FakeChain:
                 "pool": lambda b: POOL,
                 "spotPrice": spot,
                 "totalDebt": lambda b: _pool_state(b)["borrowed"] * 10**12,  # WAD
+                "vaultConfig": lambda b: (WAD, 11 * WAD // 10),  # debt floor 1, ratio 1.1
+                "liquidationConfig": lambda b: (99 * WAD // 100, 98 * WAD // 100),
             },
         )
     )

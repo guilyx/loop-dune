@@ -38,6 +38,8 @@ class ChainStats:
     end: str | None = None
     planned: int = 0
     completed: int = 0
+    #: existing snapshots re-read at their stored block to fill newly registered series
+    topped_up: int = 0
     failed_hours: list[str] = field(default_factory=list)
     observations: int = 0
     failed_calls: int = 0
@@ -142,6 +144,22 @@ class Indexer:
                     if len(pending) >= options.concurrency * 2:
                         self._drain(pending, stats, block=False)
                 self._drain(pending, stats, block=True)
+
+                # Series added to the registry after older snapshots were taken: re-read
+                # them at the stored block (no timestamp->block resolution needed).
+                stale = self.store.snapshots_missing_new_series(cfg.chain_id, start, end)
+                if options.max_points is not None:
+                    stale = stale[: options.max_points]
+                if stale:
+                    log.info("chain.top_up", chain=chain, snapshots=len(stale))
+                before = stats.completed
+                for ts, block, block_ts in stale:
+                    pending[pool.submit(snapshot, ts, block, block_ts)] = ts
+                    if len(pending) >= options.concurrency * 2:
+                        self._drain(pending, stats, block=False)
+                self._drain(pending, stats, block=True)
+                stats.topped_up = stats.completed - before
+                stats.completed = before
             stats.block_round_trips = resolver.rpc_round_trips
         finally:
             rpc.close()

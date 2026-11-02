@@ -41,7 +41,8 @@ def test_series_expansion(registry: Registry) -> None:
     assert "tst.pool.locked_shares" in metrics
     assert "tst.staking.total_assets" in metrics
     assert "tst.vault.alpha.pool_borrowed" in metrics
-    assert len(metrics) == 6 + 1 + 2 + 5
+    assert "tst.vault.alpha.liquidation_ratio" in metrics
+    assert len(metrics) == 6 + 1 + 2 + 7
 
 
 def _mutate(path: Path, change: dict) -> Path:  # type: ignore[type-arg]

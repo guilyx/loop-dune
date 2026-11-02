@@ -19,7 +19,7 @@ def _fresh_settings() -> None:
 def test_registry_show() -> None:
     result = runner.invoke(app, ["registry", "show"])
     assert result.exit_code == 0, result.output
-    assert "total: 114 series" in result.output
+    assert "total: 146 series" in result.output
 
     result = runner.invoke(app, ["registry", "show", "--json"])
     rows = json.loads(result.output)

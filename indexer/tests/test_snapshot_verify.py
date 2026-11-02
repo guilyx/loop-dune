@@ -36,11 +36,14 @@ def test_snapshot_only_reads_active_series(registry: Registry, rpc: RpcClient) -
 def test_snapshot_values_are_scaled(registry: Registry, rpc: RpcClient) -> None:
     snap = _snap(registry, rpc, 1_000)
     values = {o.series_id: o for o in snap.observations}
-    assert snap.series_count == 14
+    assert snap.series_count == 16
     assert values["tst.pool.expected_liquidity"].value == 900  # (1000-100) TST
     assert values["tst.pool.borrow_rate"].value == scale(5, 2)  # 5% APR from RAY
     assert values["tst.vault.alpha.total_debt"].value == 150  # WAD-scaled debt
     assert values["tst.vault.alpha.collateral_balance"].raw == 3 * 10**18
+    # tuple outputs: the registry picks the right element
+    assert values["tst.vault.alpha.liquidation_ratio"].value == scale(11, 1)
+    assert values["tst.vault.alpha.liquidation_penalty"].value == scale(99, 2)
 
 
 def test_reverted_calls_are_recorded_not_zeroed(registry: Registry, rpc: RpcClient) -> None:

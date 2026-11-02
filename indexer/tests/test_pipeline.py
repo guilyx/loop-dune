@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 
 from loop_indexer.chain.rpc import RpcClient
-from loop_indexer.exporters.static import export_static
+from loop_indexer.exporters.static import export_static, oracle_events
 from loop_indexer.pipeline import Indexer, RunOptions
 from loop_indexer.registry import Registry
 from loop_indexer.storage.store import Store
@@ -94,6 +94,61 @@ def test_views_compute_derived_metrics(registry: Registry, store: Store, chain: 
     assert daily == 2  # 23:00 on day one, 00:00-08:00 on day two
 
 
+def test_new_series_are_backfilled_at_stored_blocks(
+    registry: Registry, store: Store, chain: FakeChain
+) -> None:
+    indexer = _indexer(registry, store, chain)
+    indexer.run(["testnet"], HOURLY)
+    sid = "tst.vault.alpha.liquidation_ratio"
+    expected = store.query(
+        "select count(*) as n from loop.observations where series_id = %s", (sid,)
+    )[0]["n"]
+    assert expected > 0
+    # Simulate the metric being added to the registry after these snapshots were taken.
+    store.execute("delete from loop.observations where series_id = %s", (sid,))
+    store.execute("update loop.series set created_at = now() where series_id = %s", (sid,))
+    calls_before = chain.requests.count("eth_getBlockByNumber")
+
+    [stats] = indexer.run(["testnet"], HOURLY)
+    assert stats.planned == 0
+    assert stats.topped_up == expected
+    restored = store.query(
+        "select count(*) as n from loop.observations where series_id = %s", (sid,)
+    )[0]["n"]
+    assert restored == expected
+    # Re-read at the stored blocks: only the run's plan touches block headers.
+    assert chain.requests.count("eth_getBlockByNumber") - calls_before <= 3
+
+    [again] = indexer.run(["testnet"], HOURLY)
+    assert again.topped_up == 0
+
+
+def test_analytics_views(registry: Registry, store: Store, chain: FakeChain) -> None:
+    _indexer(registry, store, chain).run(["testnet"], HOURLY)
+    # flows: the TVL change splits exactly into interest and net deposits
+    for f in store.query("select * from loop.market_flows_daily"):
+        assert f["tvl_change"] == pytest.approx(f["interest"] + f["net_flow"])
+    # risk: capacity used = LTV x liquidation ratio; a single vault holds all debt
+    v = store.query(
+        "select * from loop.vault_hourly where spot_price is not null order by ts desc limit 1"
+    )[0]
+    assert v["liquidation_ratio"] == pytest.approx(1.1)
+    assert v["max_ltv"] == pytest.approx(1 / 1.1)
+    assert v["capacity_used"] == pytest.approx(v["ltv"] * 1.1)
+    assert v["drop_to_liquidation"] == pytest.approx(max(0.0, 1 - v["ltv"] * 1.1))
+    c = store.query("select * from loop.market_concentration_daily order by day desc limit 1")[0]
+    assert c["debt_hhi"] == pytest.approx(1.0)
+    assert c["borrowing_vaults"] == 1
+    # yield: pass-through = supply / (borrow x utilization)
+    y = store.query("select * from loop.market_yield_daily order by day desc limit 1")[0]
+    assert y["pass_through"] == pytest.approx(0.02 / (0.05 * y["utilization"]))
+    # data quality: every chain-day is covered; the stale oracle is reported
+    cov = store.query("select sum(snapshots) as n from loop.coverage_daily")[0]["n"]
+    assert cov == 10
+    health = {r["series_id"]: r for r in store.query("select * from loop.series_health")}
+    assert health["tst.vault.alpha.spot_price"]["reverted"] >= 1
+
+
 def test_failed_calls_are_tracked(registry: Registry, store: Store, chain: FakeChain) -> None:
     # Make the oracle revert from the start of the chain's last hour.
     _indexer(registry, store, chain).run(["testnet"], HOURLY)
@@ -133,3 +188,34 @@ def test_static_export(registry: Registry, store: Store, chain: FakeChain, tmp_p
     data = json.loads((tmp_path / "tst.json").read_text())
     assert data["daily"][0]["tvl"] > 0
     assert set(data["vaults"]) == {"alpha"}
+    assert set(data["analytics"]) == {"yield", "flows", "concentration", "oracleEvents"}
+    assert data["vaults"]["alpha"][-1]["liquidation_ratio"] == pytest.approx(1.1)
+    assert meta["health"]["chains"][0]["coverage"] == 1
+    assert meta["health"]["reverting"][0]["series_id"] == "tst.vault.alpha.spot_price"
+    assert isinstance(data["analytics"]["oracleEvents"], list)
+
+
+def test_oracle_events(registry: Registry, store: Store) -> None:
+    store.sync_registry(registry)
+    spot, coll = "tst.vault.alpha.spot_price", "tst.vault.alpha.collateral_balance"
+    days = ["2025-01-01", "2025-01-02", "2025-01-03", "2025-01-04"]
+    prices = [2.0, 2.0, 0.2, None]  # -90% move, then the oracle stops answering
+    for day, price in zip(days, prices, strict=True):
+        ts = f"{day}T23:00:00Z"
+        store.execute(
+            "insert into loop.observations (series_id, ts, block_number, raw, value)"
+            " values (%s, %s, 1, 1, 1)",
+            (coll, ts),
+        )
+        if price is not None:
+            store.execute(
+                "insert into loop.observations (series_id, ts, block_number, raw, value)"
+                " values (%s, %s, 1, 1, %s)",
+                (spot, ts, price),
+            )
+    events = oracle_events(store, "tst")
+    assert [(e["day"], e["kind"]) for e in events] == [
+        ("2025-01-03", "move"),
+        ("2025-01-04", "reverted"),
+    ]
+    assert events[0]["change"] == pytest.approx(-0.9)

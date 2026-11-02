@@ -180,9 +180,9 @@ def run(
         stats = {r.chain: r.as_dict() for r in results}
         store.finish_run(run_id, "succeeded" if ok else "partial", stats)
     for r in results:
-        typer.echo(f"{r.chain}: {r.completed}/{r.planned} points, {r.observations} observations, "
-                   f"{r.failed_calls} reverted calls, {len(r.failed_hours)} failed points, "
-                   f"{r.seconds}s")  # fmt: skip
+        typer.echo(f"{r.chain}: {r.completed}/{r.planned} points, {r.topped_up} back-filled, "
+                   f"{r.observations} observations, {r.failed_calls} reverted calls, "
+                   f"{len(r.failed_hours)} failed points, {r.seconds}s")  # fmt: skip
     if not ok:
         raise typer.Exit(1)
 
