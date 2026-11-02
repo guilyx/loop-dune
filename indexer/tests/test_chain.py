@@ -167,6 +167,35 @@ def test_block_at_is_one_round_trip_for_consecutive_hours(chain: FakeChain) -> N
     assert resolver.rpc_round_trips - before <= 5
 
 
+def test_block_at_daily_steps_stay_cheap_on_fast_chains() -> None:
+    # ~0.75s blocks with jitter and a drifting rate, whole-second timestamps:
+    # like BNB Chain after Maxwell. A slope measured on one day misses the next
+    # day's boundary by ~100 blocks, which must not degrade into a long bisection.
+    rng = random.Random(3)
+    start, ms, stamps = 1_750_000_000, 0, [0]
+    for i in range(700_000):
+        drift = 1 + 0.004 * ((i // 115_200) % 2)  # alternate slightly slower days
+        ms += int(rng.uniform(700, 800) * drift)
+        stamps.append(start + ms // 1000)
+    chain = FakeChain(56, stamps)
+    rpc = RpcClient(["http://a"], transport=chain.transport(), max_batch_size=32)
+    resolver = BlockResolver(rpc)
+    day = 86_400
+    first = start - start % day + day
+    resolver.block_at(first)  # cold start
+    before = resolver.rpc_round_trips
+    for n in range(1, 6):
+        ts = first + n * day
+        assert resolver.block_at(ts) == _expected_fast(chain.timestamps, ts)
+    assert (resolver.rpc_round_trips - before) / 5 <= 3
+
+
+def _expected_fast(stamps: list[int], ts: int) -> int:
+    import bisect
+
+    return bisect.bisect_right(stamps, ts) - 1
+
+
 def test_block_at_edges(chain: FakeChain) -> None:
     rpc = RpcClient(["http://a"], transport=chain.transport())
     resolver = BlockResolver(rpc, anchors=[(10, chain.timestamps[10])])

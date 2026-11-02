@@ -47,10 +47,13 @@ period) therefore line up and can be joined without interpolation. The legacy co
 sampled every N blocks, which drifted against wall-clock time and changed cadence
 whenever N was edited.
 
-Timestamp → block uses the `BlockResolver`: interpolate from the nearest known blocks,
-fetch a 16-header window around the guess in one JSON-RPC batch, and bisect if that
-misses. Every snapshot's block becomes an anchor for the next one, so consecutive hours
-cost about one round trip (measured on mainnet). A cold start costs about 20.
+Timestamp → block uses the `BlockResolver`. It interpolates from the nearest known
+blocks, then fetches a 16-header window around the guess plus "fence" probes at ±64,
+±512 and ±4,096 blocks, all in one JSON-RPC batch. If the window misses because block
+rates drift, the fences have still narrowed the bracket enough for an exact secant guess
+on the next round, instead of a long bisection. Every snapshot's block becomes an anchor
+for the next one. Measured on mainnet: about 1 round trip per hourly step, 2 per daily
+step, and 8–10 for a cold start.
 
 ### 3. Multicall3, one call per snapshot
 
