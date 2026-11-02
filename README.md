@@ -1,12 +1,25 @@
 # Loop Dune
 
 [![CI](https://github.com/guilyx/loop-dune/actions/workflows/ci.yml/badge.svg)](https://github.com/guilyx/loop-dune/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/guilyx/loop-dune/actions/workflows/codeql.yml/badge.svg)](https://github.com/guilyx/loop-dune/actions/workflows/codeql.yml)
+[![Docs](https://github.com/guilyx/loop-dune/actions/workflows/docs.yml/badge.svg)](https://guilyx.github.io/loop-dune/)
+[![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-blue.svg)](LICENSE)
+![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)
+![Node 20+](https://img.shields.io/badge/node-20%2B-blue.svg)
 
 On-chain analytics for **Loop Protocol**'s lending markets. Every pool and CDP vault is
 read straight from contract state on an hourly UTC grid since deployment, stored in
 Postgres, published to Dune, and shown on a dashboard.
 
-![Overview](docs/img/overview.png)
+**[Documentation](https://guilyx.github.io/loop-dune/)** ·
+[Dashboard tour](https://guilyx.github.io/loop-dune/dashboard/) ·
+[Data model](https://guilyx.github.io/loop-dune/data-model/) ·
+[API](https://guilyx.github.io/loop-dune/api/) ·
+[Hosting](https://guilyx.github.io/loop-dune/deployment/)
+
+[![Demo video: a 75-second tour of the dashboard](docs/assets/demo-poster.jpg)](https://guilyx.github.io/loop-dune/#loop-dune)
+<sub>▶ Watch the 75-second demo on the [documentation site](https://guilyx.github.io/loop-dune/)
+(or [download the MP4](docs/assets/demo.mp4)).</sub>
 
 | | |
 |---|---|
@@ -137,8 +150,9 @@ supabase/     SQL migrations: tables, analysis views, read-only role
 dashboard/    Next.js dashboard and JSON/CSV API (Postgres or static snapshot)
 deploy/       VPS stack (compose, Caddy, provisioning, stack.sh) and the backup image
 dune/         DuneSQL queries over the exported tables
-docs/         architecture, data model, deployment runbook, legacy review
-.github/      CI, hourly indexer, image release + VPS deploy, weekly restore drill
+docs/         documentation site (MkDocs): guides, references, demo video
+scripts/      demo-video recorder
+.github/      CI, CodeQL, docs site, hourly indexer, image release + VPS deploy, restore drill
 ```
 
 ## Development
@@ -146,7 +160,12 @@ docs/         architecture, data model, deployment runbook, legacy review
 ```bash
 make lint     # ruff, ruff format, mypy --strict, tsc
 make test     # pytest (in-memory EVM + Postgres via TEST_DATABASE_URL) and vitest
+make docs     # documentation site, strict (broken links fail)
 ```
+
+Contributions are welcome: see [CONTRIBUTING.md](CONTRIBUTING.md), the
+[code of conduct](CODE_OF_CONDUCT.md) and the [security policy](SECURITY.md).
+Changes are listed in the [changelog](CHANGELOG.md).
 
 ## License
 

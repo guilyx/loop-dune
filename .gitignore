@@ -35,3 +35,7 @@ supabase/.temp/
 .vscode/
 *.swp
 *.log
+
+# Docs site
+site/
+.venv-docs/
