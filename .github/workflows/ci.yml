@@ -34,7 +34,7 @@ jobs:
       TEST_DATABASE_URL: postgresql://loop:loop@localhost:5432/loop_test
     steps:
       - uses: actions/checkout@v5
-      - uses: astral-sh/setup-uv@v6
+      - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
           cache-dependency-glob: indexer/uv.lock
