@@ -82,6 +82,20 @@ def export_static(store: Store, registry: Registry, out_dir: Path) -> list[Path]
         "resolution": "1d",
         "freshness": freshness,
         "markets": [market_meta(registry, m) for m in registry.markets],
+        "series": [
+            {
+                "series_id": s.series_id,
+                "market_id": s.market_id,
+                "entity_type": s.entity_type,
+                "entity_id": s.entity_id,
+                "metric": s.metric,
+                "unit": s.unit,
+                "description": s.description,
+                "contract": s.target,
+                "call": s.signature,
+            }
+            for s in registry.series
+        ],
     }
     path = out_dir / "meta.json"
     path.write_text(json.dumps(meta, indent=1) + "\n")

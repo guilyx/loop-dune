@@ -5,7 +5,8 @@ Tables (public, in ``dune.<namespace>.<prefix>_*``):
 * ``<prefix>_observations`` - append-only fact table, one row per (series, hour).
   Created once with an explicit schema, then appended to with ``/insert``.
 * ``<prefix>_markets``, ``<prefix>_vaults``, ``<prefix>_series`` - small catalogues,
-  overwritten on every export with ``/uploads/csv``.
+  replaced on every export (``/clear`` then ``/insert``). Using create + insert for
+  every table keeps them all addressable as ``dune.<namespace>.<table>``.
 
 Delivery is at-least-once: the cursor advances only after Dune acknowledges a batch,
 so a crash can re-send one batch. Queries de-duplicate on ``(series_id, ts)`` keeping
@@ -46,6 +47,46 @@ OBSERVATIONS_SCHEMA: tuple[tuple[str, str, bool], ...] = (
     ("raw_value", "varchar", False),
     ("ingested_at", "timestamp", False),
 )
+
+
+_V, _I, _B = "varchar", "integer", "boolean"
+
+# Catalogue tables: (schema, source query, description). Joined in dune/queries/*.sql.
+CATALOGUE: dict[str, tuple[tuple[tuple[str, str, bool], ...], str, str]] = {
+    "markets": (
+        (
+            ("market_id", _V, False), ("name", _V, False), ("chain", _V, False),
+            ("chain_id", _I, False), ("underlying_symbol", _V, False),
+            ("underlying_address", _V, False), ("underlying_decimals", _I, False),
+            ("pool_address", _V, False), ("pool_symbol", _V, False),
+            ("staking_address", _V, True), ("staking_symbol", _V, True),
+            ("start_block", _I, False),
+        ),
+        "select * from loop.markets order by market_id",
+        "Loop markets (one lending pool each).",
+    ),
+    "vaults": (
+        (
+            ("market_id", _V, False), ("vault_id", _V, False), ("name", _V, False),
+            ("address", _V, False), ("collateral_symbol", _V, False),
+            ("collateral_address", _V, False), ("collateral_decimals", _I, False),
+            ("registered", _B, False), ("deployed_block", _I, False), ("notes", _V, True),
+        ),
+        "select * from loop.vaults order by market_id, vault_id",
+        "Loop CDP vaults (borrowers of each pool).",
+    ),
+    "series": (
+        (
+            ("series_id", _V, False), ("chain", _V, False), ("chain_id", _I, False),
+            ("market_id", _V, False), ("entity_type", _V, False), ("entity_id", _V, False),
+            ("metric", _V, False), ("contract_address", _V, False),
+            ("function_signature", _V, False), ("decimals", _I, False), ("unit", _V, False),
+            ("description", _V, False), ("active_from_block", _I, False),
+        ),
+        "select * from loop.series order by series_id",
+        "Loop series catalogue: how each observed value is read on-chain.",
+    ),
+}  # fmt: skip
 
 
 class DuneError(Exception):
@@ -151,21 +192,6 @@ class DuneClient:
     def clear_table(self, namespace: str, table: str) -> None:
         self._request("POST", f"/uploads/{namespace}/{table}/clear")
 
-    def upload_csv(
-        self, table: str, data: str, *, description: str, is_private: bool = False
-    ) -> None:
-        """Create-or-overwrite a small table in one call."""
-        self._request(
-            "POST",
-            "/uploads/csv",
-            json={
-                "table_name": table,
-                "data": data,
-                "description": description,
-                "is_private": is_private,
-            },
-        )
-
 
 @dataclass
 class ExportStats:
@@ -191,20 +217,19 @@ class DuneExporter:
         return f"dune:{self.namespace}.{self.observations_table}"
 
     def export_catalogue(self) -> None:
-        tables = {
-            "markets": ("select * from loop.markets order by market_id", "Loop markets"),
-            "vaults": ("select * from loop.vaults order by market_id, vault_id", "Loop vaults"),
-            "series": ("select * from loop.series order by series_id", "Loop series catalogue"),
-        }
-        for name, (sql, description) in tables.items():
+        """Replace the small catalogue tables (create once, then clear + insert)."""
+        for name, (schema, sql, description) in CATALOGUE.items():
+            table = f"{self.prefix}_{name}"
             rows = self.store.query(sql)
-            if not rows:
-                continue
-            columns = [c for c in rows[0] if c not in {"call_args", "updated_at"}]
-            self.client.upload_csv(
-                f"{self.prefix}_{name}", to_csv(rows, columns), description=description
+            created = self.client.create_table(
+                self.namespace, table, schema, description=description
             )
-            log.info("dune.catalogue_uploaded", table=f"{self.prefix}_{name}", rows=len(rows))
+            if not created:
+                self.client.clear_table(self.namespace, table)
+            if rows:
+                columns = [c for c, _, _ in schema]
+                self.client.insert_csv(self.namespace, table, to_csv(rows, columns))
+            log.info("dune.catalogue_replaced", table=table, rows=len(rows))
 
     def export_observations(
         self, *, full: bool = False, batch_size: int = 50_000, max_batches: int | None = None

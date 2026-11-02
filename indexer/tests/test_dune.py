@@ -18,7 +18,6 @@ from tests.fakechain import FakeChain
 class FakeDune:
     def __init__(self) -> None:
         self.tables: dict[str, list[str]] = {}
-        self.uploads: dict[str, str] = {}
         self.calls: list[str] = []
         self.fail_next: list[int] = []
 
@@ -35,10 +34,6 @@ class FakeDune:
                 existed = name in self.tables
                 self.tables.setdefault(name, [])
                 return httpx.Response(200, json={"already_existed": existed, "full_name": name})
-            if path == "/uploads/csv":
-                body = json.loads(request.content)
-                self.uploads[body["table_name"]] = body["data"]
-                return httpx.Response(200, json={"success": True})
             parts = path.strip("/").split("/")  # uploads/<ns>/<table>/<op>
             name = f"{parts[1]}.{parts[2]}"
             if name not in self.tables:
@@ -92,7 +87,10 @@ def test_exporter_appends_incrementally_and_reloads(
     dune = FakeDune()
     exporter = DuneExporter(store, _client(dune), namespace="ns", prefix="loop")
     exporter.export_catalogue()
-    assert set(dune.uploads) == {"loop_markets", "loop_vaults", "loop_series"}
+    exporter.export_catalogue()  # second run replaces rather than duplicates
+    assert len(dune.tables["ns.loop_markets"]) == 1
+    assert len(dune.tables["ns.loop_vaults"]) == 1
+    assert len(dune.tables["ns.loop_series"]) == len(registry.series)
 
     stats = exporter.export_observations(batch_size=7)
     assert stats.created

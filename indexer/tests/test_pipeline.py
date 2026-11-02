@@ -118,6 +118,7 @@ def test_static_export(registry: Registry, store: Store, chain: FakeChain, tmp_p
     assert {f.name for f in files} == {"meta.json", "tst.json"}
     meta = json.loads((tmp_path / "meta.json").read_text())
     assert meta["markets"][0]["vaults"][0]["id"] == "alpha"
+    assert len(meta["series"]) == len(registry.series)
     data = json.loads((tmp_path / "tst.json").read_text())
     assert data["daily"][0]["tvl"] > 0
     assert set(data["vaults"]) == {"alpha"}
