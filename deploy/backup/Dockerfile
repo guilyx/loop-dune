@@ -2,7 +2,7 @@
 # Backups for the Loop database: pg_dump (matching the server's major version),
 # age encryption and rclone offsite copies. Build context: deploy/backup/
 #   docker build -t loop-backup deploy/backup
-FROM postgres:16-alpine
+FROM postgres:18-alpine
 
 RUN apk add --no-cache age rclone curl bash coreutils tzdata \
  && mkdir -p /backups \
