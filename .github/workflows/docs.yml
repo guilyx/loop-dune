@@ -1,0 +1,87 @@
+name: Docs
+
+# Builds the documentation site (MkDocs, --strict: broken links and anchors fail) on
+# every pull request that touches it, and publishes it to GitHub Pages from master.
+#
+# One-time setup: Settings → Pages → Build and deployment → Source: "GitHub Actions".
+# Until then the deploy job skips with a warning instead of failing.
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - docs/**
+      - mkdocs.yml
+      - README.md
+      - CHANGELOG.md
+      - CONTRIBUTING.md
+      - SECURITY.md
+      - .github/workflows/docs.yml
+  pull_request:
+    paths:
+      - docs/**
+      - mkdocs.yml
+      - README.md
+      - CHANGELOG.md
+      - CONTRIBUTING.md
+      - SECURITY.md
+      - .github/workflows/docs.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: docs-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: docs/requirements.txt
+      - run: pip install -r docs/requirements.txt
+      - name: Build (strict)
+        run: mkdocs build --strict
+        env:
+          NO_MKDOCS_2_WARNING: "1"
+      - uses: actions/upload-pages-artifact@v5
+        if: github.event_name != 'pull_request'
+        with:
+          path: site
+
+  deploy:
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/master'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    steps:
+      - name: Check that Pages deploys from GitHub Actions
+        id: pages
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          build_type=$(gh api "repos/$GITHUB_REPOSITORY/pages" --jq .build_type 2>/dev/null || true)
+          if [[ "$build_type" == workflow ]]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning title=GitHub Pages is not set up::Settings → Pages → Source: GitHub Actions, then re-run this workflow."
+            echo "Site built but not published: enable Pages (Source: GitHub Actions) and re-run." >> "$GITHUB_STEP_SUMMARY"
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          fi
+      - id: deploy
+        if: steps.pages.outputs.enabled == 'true'
+        uses: actions/deploy-pages@v5

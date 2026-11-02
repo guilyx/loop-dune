@@ -1,0 +1,41 @@
+name: CodeQL
+
+# Static analysis for security bugs in the indexer (Python), the dashboard
+# (TypeScript) and the workflows themselves. Findings appear under Security → Code
+# scanning.
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  schedule:
+    - cron: "29 4 * * 2"   # weekly, catches new queries against unchanged code
+
+permissions:
+  contents: read
+
+concurrency:
+  group: codeql-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [python, javascript-typescript, actions]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: github/codeql-action/init@v4
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: none
+          queries: security-and-quality
+      - uses: github/codeql-action/analyze@v4
+        with:
+          category: /language:${{ matrix.language }}

@@ -1,0 +1,102 @@
+# Documentation site: https://guilyx.github.io/loop-dune/
+#   make docs-serve       (pip install -r docs/requirements.txt && mkdocs serve)
+# Built with --strict in CI and deployed to GitHub Pages by .github/workflows/docs.yml.
+# Material for MkDocs is supported until May 2027; its successor Zensical builds this
+# same file unchanged (`zensical build`), so moving over is a CI change, not a rewrite.
+site_name: Loop Dune
+site_description: >-
+  On-chain analytics for Loop Protocol's lending markets: an hourly indexer, Postgres
+  views, public Dune tables and a dashboard.
+site_url: https://guilyx.github.io/loop-dune/
+repo_url: https://github.com/guilyx/loop-dune
+repo_name: guilyx/loop-dune
+edit_uri: edit/master/docs/
+copyright: GPL-3.0 · all data is read from public contract state
+
+strict: true
+validation:
+  omitted_files: warn
+  absolute_links: info
+  unrecognized_links: warn
+  anchors: warn
+
+theme:
+  name: material
+  logo: assets/logo.svg
+  favicon: assets/logo.svg
+  icon:
+    repo: fontawesome/brands/github
+  palette:
+    - media: "(prefers-color-scheme)"
+      toggle: { icon: material/brightness-auto, name: Switch to light mode }
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: blue
+      toggle: { icon: material/weather-sunny, name: Switch to dark mode }
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: blue
+      toggle: { icon: material/weather-night, name: Follow the system setting }
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - navigation.footer
+    - navigation.instant
+    - toc.follow
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.action.edit
+
+extra_css:
+  - assets/extra.css
+
+markdown_extensions:
+  - abbr
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets:
+      base_path: ["."]
+      check_paths: true
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+
+nav:
+  - Home: index.md
+  - Dashboard:
+      - Feature tour: dashboard.md
+      - HTTP API: api.md
+  - Data:
+      - Data model: data-model.md
+      - Dune: dune.md
+  - Indexer:
+      - Architecture: architecture.md
+      - CLI and configuration: indexer.md
+  - Hosting:
+      - Managed (Supabase, Actions, Vercel): deployment.md
+      - Single VPS: vps.md
+      - Backups: backups.md
+  - Project:
+      - Contributing: contributing.md
+      - Changelog: changelog.md
+      - Security: security.md
+      - Legacy pipeline review: legacy-review.md

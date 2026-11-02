@@ -1,3 +1,5 @@
+# Grouped updates: one PR per ecosystem and schedule, so bumps that touch neighbouring
+# lines (e.g. several actions in one workflow) never conflict with each other.
 version: 2
 updates:
   - package-ecosystem: uv
@@ -8,9 +10,14 @@ updates:
     directory: /dashboard
     schedule: { interval: weekly }
     groups: { npm: { patterns: ["*"] } }
+  - package-ecosystem: pip
+    directory: /docs
+    schedule: { interval: monthly }
+    groups: { docs: { patterns: ["*"] } }
   - package-ecosystem: github-actions
     directory: /
     schedule: { interval: monthly }
+    groups: { actions: { patterns: ["*"] } }
   - package-ecosystem: docker
-    directories: [/indexer, /dashboard]
+    directories: [/indexer, /dashboard, /deploy/backup]
     schedule: { interval: monthly }

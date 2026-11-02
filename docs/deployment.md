@@ -97,7 +97,7 @@ With `DUNE_API_KEY` and `DUNE_NAMESPACE` set, every indexer run:
 * appends observations ingested since the last acknowledged batch.
 
 Create queries from `dune/queries/` and set their `namespace` parameter. See
-[`dune/README.md`](../dune/README.md).
+[Dune](dune.md).
 
 ## Other container hosts
 

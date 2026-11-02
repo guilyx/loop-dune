@@ -22,7 +22,7 @@ flowchart LR
 | **Size** | 2 vCPU / 2 GB RAM / 40 GB disk is plenty (Hetzner CX22, DigitalOcean, OVH...). The full hourly history is ~700 MB in Postgres. |
 | **OS** | Ubuntu 22.04/24.04 or Debian 12 |
 | **Exposed** | 22 (SSH), 80/443 (Caddy). Postgres and the dashboard have no internet route. |
-| **Files** | [`deploy/vps/`](../deploy/vps): `docker-compose.yml`, `Caddyfile`, `.env.example`, `stack.sh`, `bootstrap.sh` |
+| **Files** | [`deploy/vps/`](https://github.com/guilyx/loop-dune/tree/master/deploy/vps): `docker-compose.yml`, `Caddyfile`, `.env.example`, `stack.sh`, `bootstrap.sh` |
 
 ## Set up (about 20 minutes)
 

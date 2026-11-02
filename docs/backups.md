@@ -14,7 +14,7 @@ restoring it in CI. Only the public key is on the server.
 | **Proof** | Weekly restore drill (CI) and a full round trip in CI on every change |
 | **RPO / RTO** | ≤ 24 h of the database / ~5 min to restore |
 
-Code: [`deploy/backup/`](../deploy/backup). The image is `postgres:16-alpine` with age,
+Code: [`deploy/backup/`](https://github.com/guilyx/loop-dune/tree/master/deploy/backup). The image is `postgres:16-alpine` with age,
 rclone and the scripts; it runs as the `backup` service in the [VPS stack](vps.md).
 
 ## What a lost hour actually costs
@@ -77,7 +77,7 @@ Run *Restore drill* once by hand to see it pass.
 ## The weekly restore drill
 
 A backup is only trusted once it has been restored. Every Monday,
-[`restore-drill.yml`](../.github/workflows/restore-drill.yml):
+[`restore-drill.yml`](https://github.com/guilyx/loop-dune/blob/master/.github/workflows/restore-drill.yml):
 
 1. lists the bucket and takes the newest backup; fails if it is older than
    `BACKUP_MAX_AGE_HOURS` (30),
@@ -132,7 +132,7 @@ pg_restore --no-owner --dbname "$DATABASE_URL" loop.dump
 ## Testing changes to the scripts
 
 CI (`backups` job) builds the image and runs
-[`test-roundtrip.sh`](../deploy/backup/test-roundtrip.sh) against a real Postgres:
+[`test-roundtrip.sh`](https://github.com/guilyx/loop-dune/blob/master/deploy/backup/test-roundtrip.sh) against a real Postgres:
 encrypted backup → offsite copy → delete local → restore from offsite → row counts
 must match → second restore is idempotent → drill → a tampered file is rejected → a
 live restore without confirmation is refused. Locally:
