@@ -222,8 +222,15 @@ class Store:
 
     # ------------------------------------------------------------------ runs
 
-    def start_run(self, command: str, params: dict[str, Any]) -> int:
+    def start_run(self, command: str, params: dict[str, Any], stale_hours: int = 6) -> int:
         with self.transaction() as cur:
+            # A process killed mid-run (OOM, cancelled CI job) never records its end.
+            cur.execute(
+                "update loop.runs set status = 'failed', finished_at = now(),"
+                " error = 'abandoned: no completion recorded'"
+                " where status = 'running' and started_at < now() - make_interval(hours => %s)",
+                (stale_hours,),
+            )
             cur.execute(
                 "insert into loop.runs (command, params) values (%s, %s) returning run_id",
                 (command, Jsonb(params)),

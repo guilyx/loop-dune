@@ -1,12 +1,12 @@
 # Deployment
 
 Everything needed to host the stack is in this repository. Nothing is deployed by
-default: the hourly workflow stays off until you enable it. Budget: about an hour, and
-$0 on free tiers apart from a paid archive RPC.
+default: the hourly workflow stays off until you enable it. Budget about an hour. The
+running costs are an archive RPC plan and, for the full hourly history, Supabase Pro.
 
 | Component | Service | Free tier enough? |
 |---|---|---|
-| Database | Supabase (Postgres 15+) | Yes: ~2M rows/year at hourly resolution |
+| Database | Supabase (Postgres 15+) | Partly: ~1M rows (~340 MB with indexes) per year of hourly data, so the full history since 2024 (~700 MB) exceeds the free plan's database size. Use Pro, or keep older history daily. |
 | Indexer | GitHub Actions cron | Yes: ~1–2 min per hourly run once caught up |
 | Dashboard | Vercel | Yes |
 | Dune export | Dune API | Yes, for public tables |

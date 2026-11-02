@@ -87,9 +87,15 @@ the series templates.
 
 ## Findings in the data
 
-* **Undercollateralised syrupUSDC position.** From 20 June 2025 the
-  `pendle-syrupusdc-aug25` vault carried about 121.5k USDC of debt against
-  0.0000000597 LP tokens of collateral (LTV ≈ 8×10¹¹ at the correctly scaled price). At
-  the vault's own 1e30-scaled oracle, that dust was valued at about $153k. The debt was
-  later reduced to 4,000 USDC, where it has stayed. The dashboard's "Data findings"
-  section flags every vault-day like this automatically.
+* **syrupUSDC vault borrowed against dust.** On 18 June 2025 the
+  `pendle-syrupusdc-aug25` vault held 120,010 USDC of debt against 0.000000059 LP tokens
+  of collateral (worth well under a cent). Read through the vault's own 1e30-scaled oracle
+  as if it were 1e18, that dust looks like about $150k of collateral, which is what made
+  the position look healthy on-chain. Debt peaked at 124,010 USDC and was later reduced.
+  4,000 USDC is still outstanding against 0.000000002 LP tokens (as of 2 Nov 2026).
+* **sdeUSD oracle failure.** On 7 November 2025 the `spectra-sdeusd` oracle reported
+  0.209, a tenth of the previous day's 2.09, which put the vault at 759% LTV. From
+  8 November `spotPrice()` reverts. The vault's 2,236 USDC of debt is unchanged.
+
+The dashboard's "Data findings" section flags every vault-day with LTV above 100%
+automatically.

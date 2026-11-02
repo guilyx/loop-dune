@@ -112,6 +112,17 @@ def test_window_options(registry: Registry, store: Store, chain: FakeChain) -> N
     assert all(r["ts"] >= start for r in store.query("select ts from loop.snapshots"))
 
 
+def test_abandoned_runs_are_closed(store: Store) -> None:
+    old = store.start_run("run", {})
+    store.execute("update loop.runs set started_at = now() - interval '1 day' where run_id = %s",
+                  (old,))  # fmt: skip
+    current = store.start_run("run", {})
+    rows = {r["run_id"]: r for r in store.query("select * from loop.runs")}
+    assert rows[old]["status"] == "failed"
+    assert rows[old]["error"].startswith("abandoned")
+    assert rows[current]["status"] == "running"
+
+
 def test_static_export(registry: Registry, store: Store, chain: FakeChain, tmp_path: Path) -> None:
     _indexer(registry, store, chain).run(["testnet"], HOURLY)
     files = export_static(store, registry, tmp_path)
