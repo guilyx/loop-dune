@@ -1,8 +1,8 @@
 # Loop Dune
 
-[![CI](https://github.com/guilyx/loop-dune/actions/workflows/ci.yml/badge.svg)](https://github.com/guilyx/loop-dune/actions/workflows/ci.yml)
-[![CodeQL](https://github.com/guilyx/loop-dune/actions/workflows/codeql.yml/badge.svg)](https://github.com/guilyx/loop-dune/actions/workflows/codeql.yml)
-[![Docs](https://github.com/guilyx/loop-dune/actions/workflows/docs.yml/badge.svg)](https://guilyx.github.io/loop-dune/)
+[![CI](https://github.com/guilyx/loopscan/actions/workflows/ci.yml/badge.svg)](https://github.com/guilyx/loopscan/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/guilyx/loopscan/actions/workflows/codeql.yml/badge.svg)](https://github.com/guilyx/loopscan/actions/workflows/codeql.yml)
+[![Docs](https://github.com/guilyx/loopscan/actions/workflows/docs.yml/badge.svg)](https://guilyx.github.io/loopscan/)
 [![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-blue.svg)](LICENSE)
 ![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)
 ![Node 20+](https://img.shields.io/badge/node-20%2B-blue.svg)
@@ -11,14 +11,14 @@ On-chain analytics for **Loop Protocol**'s lending markets. Every pool and CDP v
 read straight from contract state on an hourly UTC grid since deployment, stored in
 Postgres, published to Dune, and shown on a dashboard.
 
-**[Documentation](https://guilyx.github.io/loop-dune/)** ·
-[Dashboard tour](https://guilyx.github.io/loop-dune/dashboard/) ·
-[Data model](https://guilyx.github.io/loop-dune/data-model/) ·
-[API](https://guilyx.github.io/loop-dune/api/) ·
-[Hosting](https://guilyx.github.io/loop-dune/deployment/)
+**[Documentation](https://guilyx.github.io/loopscan/)** ·
+[Dashboard tour](https://guilyx.github.io/loopscan/dashboard/) ·
+[Data model](https://guilyx.github.io/loopscan/data-model/) ·
+[API](https://guilyx.github.io/loopscan/api/) ·
+[Hosting](https://guilyx.github.io/loopscan/deployment/)
 
-[![Demo video: a 75-second tour of the dashboard](docs/assets/demo-poster.jpg)](https://guilyx.github.io/loop-dune/#loop-dune)
-<sub>▶ Watch the 75-second demo on the [documentation site](https://guilyx.github.io/loop-dune/)
+[![Demo video: a 75-second tour of the dashboard](docs/assets/demo-poster.jpg)](https://guilyx.github.io/loopscan/#loop-dune)
+<sub>▶ Watch the 75-second demo on the [documentation site](https://guilyx.github.io/loopscan/)
 (or [download the MP4](docs/assets/demo.mp4)).</sub>
 
 | | |

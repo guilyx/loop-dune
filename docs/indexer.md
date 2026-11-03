@@ -1,7 +1,7 @@
 # Indexer CLI and configuration
 
 `loop-indexer` is a Python package in
-[`indexer/`](https://github.com/guilyx/loop-dune/tree/master/indexer) (Python ≥ 3.11,
+[`indexer/`](https://github.com/guilyx/loopscan/tree/master/indexer) (Python ≥ 3.11,
 managed with [uv](https://docs.astral.sh/uv/)). It also ships as a Docker image,
 `ghcr.io/guilyx/loop-dune-indexer`.
 
@@ -44,7 +44,7 @@ window has passed), `--interval` (sampling), `--max-lag`, `--no-dune`, `--concur
 ## Configuration
 
 Environment variables only (a `.env` file in the working directory is read too). See
-[`.env.example`](https://github.com/guilyx/loop-dune/blob/master/.env.example).
+[`.env.example`](https://github.com/guilyx/loopscan/blob/master/.env.example).
 
 | Variable | Default | Purpose |
 |---|---|---|

@@ -296,7 +296,7 @@ async function main() {
   await card(
     page,
     "<h1>Loop Dune</h1><p>Indexer · Postgres views · public Dune tables · dashboard · API</p>" +
-      "<p><code>guilyx.github.io/loop-dune</code> &nbsp;·&nbsp; <code>github.com/guilyx/loop-dune</code></p>",
+      "<p><code>guilyx.github.io/loopscan</code> &nbsp;·&nbsp; <code>github.com/guilyx/loopscan</code></p>",
   );
   await hold(page, 3.5);
 

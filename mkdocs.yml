@@ -1,4 +1,4 @@
-# Documentation site: https://guilyx.github.io/loop-dune/
+# Documentation site: https://guilyx.github.io/loopscan/
 #   make docs-serve       (pip install -r docs/requirements.txt && mkdocs serve)
 # Built with --strict in CI and deployed to GitHub Pages by .github/workflows/docs.yml.
 # Material for MkDocs is supported until May 2027; its successor Zensical builds this
@@ -7,9 +7,9 @@ site_name: Loop Dune
 site_description: >-
   On-chain analytics for Loop Protocol's lending markets: an hourly indexer, Postgres
   views, public Dune tables and a dashboard.
-site_url: https://guilyx.github.io/loop-dune/
-repo_url: https://github.com/guilyx/loop-dune
-repo_name: guilyx/loop-dune
+site_url: https://guilyx.github.io/loopscan/
+repo_url: https://github.com/guilyx/loopscan
+repo_name: guilyx/loopscan
 edit_uri: edit/master/docs/
 copyright: GPL-3.0 · all data is read from public contract state
 

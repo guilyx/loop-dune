@@ -18,7 +18,7 @@ Notable changes, newest first. The format follows
 - The indexer image builds and runs on the same Python base image, so base-image
   updates can no longer leave packages built for another Python version.
 
-## 2026-11-02 · Single-VPS deployment and backups ([#11](https://github.com/guilyx/loop-dune/pull/11))
+## 2026-11-02 · Single-VPS deployment and backups ([#11](https://github.com/guilyx/loopscan/pull/11))
 
 ### Added
 - `deploy/vps`: Docker Compose stack (Postgres, scheduled indexer, dashboard behind
@@ -33,7 +33,7 @@ Notable changes, newest first. The format follows
 ### Changed
 - Dependency and GitHub Actions updates from Dependabot (#2, #3, #5–#10).
 
-## 2026-11-02 · Rebuild ([#1](https://github.com/guilyx/loop-dune/pull/1))
+## 2026-11-02 · Rebuild ([#1](https://github.com/guilyx/loopscan/pull/1))
 
 ### Added
 - Hourly state indexer (Multicall3, on-chain-verified registry, self-healing runs).

@@ -2,7 +2,7 @@
 # Provision a fresh Ubuntu 22.04/24.04 or Debian 12 server for the Loop stack.
 # Run once as root; safe to re-run.
 #
-#   curl -fsSL https://raw.githubusercontent.com/guilyx/loop-dune/master/deploy/vps/bootstrap.sh \
+#   curl -fsSL https://raw.githubusercontent.com/guilyx/loopscan/master/deploy/vps/bootstrap.sh \
 #     | sudo bash
 #
 # What it does:
@@ -14,12 +14,12 @@
 #   * SSH: key-only logins once a key is installed (never locks you out without one)
 #
 # Settings (environment): DEPLOY_USER=loop APP_DIR=/opt/loop-dune BRANCH=master
-#   REPO_URL=https://github.com/guilyx/loop-dune.git SWAP_SIZE=2G
+#   REPO_URL=https://github.com/guilyx/loopscan.git SWAP_SIZE=2G
 set -Eeuo pipefail
 
 DEPLOY_USER="${DEPLOY_USER:-loop}"
 APP_DIR="${APP_DIR:-/opt/loop-dune}"
-REPO_URL="${REPO_URL:-https://github.com/guilyx/loop-dune.git}"
+REPO_URL="${REPO_URL:-https://github.com/guilyx/loopscan.git}"
 BRANCH="${BRANCH:-master}"
 SWAP_SIZE="${SWAP_SIZE:-2G}"
 

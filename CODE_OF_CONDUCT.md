@@ -9,7 +9,7 @@ attacks are not tolerated, in any project space.
 ## Enforcement
 
 Report unacceptable behaviour to the maintainer privately, through a
-[private security advisory](https://github.com/guilyx/loop-dune/security/advisories/new)
+[private security advisory](https://github.com/guilyx/loopscan/security/advisories/new)
 or the email on the maintainer's GitHub profile. Reports are handled confidentially.
 Maintainers may remove, edit or reject contributions, and temporarily or permanently
 ban contributors, for behaviour they deem inappropriate, following the Covenant's

@@ -109,7 +109,7 @@ More in [the data model](data-model.md#findings-in-the-data).
 Requirements: [uv](https://docs.astral.sh/uv/), Node 20+, and Docker (or any Postgres ≥ 14).
 
 ```bash
-git clone https://github.com/guilyx/loop-dune && cd loop-dune
+git clone https://github.com/guilyx/loopscan && cd loopscan
 cp .env.example .env          # add archive RPC URLs
 make setup                    # Python + Node dependencies
 make db migrate               # local Postgres + schema
