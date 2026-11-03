@@ -21,3 +21,9 @@ updates:
   - package-ecosystem: docker
     directories: [/indexer, /dashboard, /deploy/backup]
     schedule: { interval: monthly }
+    ignore:
+      # The backup image's pg_dump/pg_restore must match the database's major version
+      # (postgres:16 in deploy/vps): a newer pg_restore emits settings Postgres 16
+      # rejects. Upgrade both together, deliberately, with a dump and restore.
+      - dependency-name: postgres
+        update-types: [version-update:semver-major]
