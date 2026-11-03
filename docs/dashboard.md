@@ -1,6 +1,6 @@
 # Dashboard feature tour
 
-The dashboard is a Next.js app in [`dashboard/`](https://github.com/guilyx/loop-dune/tree/master/dashboard).
+The dashboard is a Next.js app in [`dashboard/`](https://github.com/guilyx/loopscan/tree/master/dashboard).
 It reads Postgres through a read-only role, or a committed static snapshot when no
 database is configured. Every number on it comes from a SQL view, so the dashboard,
 the [HTTP API](api.md) and the [Dune queries](dune.md) agree by construction.

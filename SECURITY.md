@@ -4,7 +4,7 @@
 
 Please **do not open a public issue**. Report it privately through GitHub:
 **Security → Report a vulnerability** on the repository
-([direct link](https://github.com/guilyx/loop-dune/security/advisories/new)).
+([direct link](https://github.com/guilyx/loopscan/security/advisories/new)).
 
 Include what is affected, how to reproduce it, and the impact you expect. You will get
 an acknowledgement within a few days and a fix or a plan as soon as it is understood.

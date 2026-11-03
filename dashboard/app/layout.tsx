@@ -36,7 +36,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
           <main>{children}</main>
           <footer className="footer">
             Data read directly from contract state by{" "}
-            <a href="https://github.com/guilyx/loop-dune">loop-indexer</a> ·{" "}
+            <a href="https://github.com/guilyx/loopscan">loop-indexer</a> ·{" "}
             {meta.source === "postgres" ? "live database" : "static snapshot"} · generated{" "}
             {meta.generatedAt.slice(0, 10)}
           </footer>

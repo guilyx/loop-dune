@@ -23,18 +23,18 @@ Delivery is at-least-once. Always de-duplicate on `(series_id, ts)` keeping the 
 
 | File | Use it for |
 |---|---|
-| [`00_observations_dedup.sql`](https://github.com/guilyx/loop-dune/blob/master/dune/queries/00_observations_dedup.sql) | base view; save once and reference as `query_<id>` |
-| [`01_market_hourly.sql`](https://github.com/guilyx/loop-dune/blob/master/dune/queries/01_market_hourly.sql) | TVL, borrows, utilization, APRs, share prices per market and hour |
-| [`02_vault_hourly.sql`](https://github.com/guilyx/loop-dune/blob/master/dune/queries/02_vault_hourly.sql) | collateral, oracle price, debt and LTV per vault and hour |
-| [`03_tvl_daily.sql`](https://github.com/guilyx/loop-dune/blob/master/dune/queries/03_tvl_daily.sql) | chart-ready end-of-day TVL / borrows / utilization |
-| [`04_market_overview.sql`](https://github.com/guilyx/loop-dune/blob/master/dune/queries/04_market_overview.sql) | counters: latest state, all-time peak, drawdown |
-| [`05_flows_daily.sql`](https://github.com/guilyx/loop-dune/blob/master/dune/queries/05_flows_daily.sql) | TVL change split into interest and net deposits |
-| [`06_realized_yield.sql`](https://github.com/guilyx/loop-dune/blob/master/dune/queries/06_realized_yield.sql) | realized lender APY from share price vs quoted APR |
-| [`07_vault_risk.sql`](https://github.com/guilyx/loop-dune/blob/master/dune/queries/07_vault_risk.sql) | capacity used and price drop to liquidation per vault |
-| [`08_debt_concentration.sql`](https://github.com/guilyx/loop-dune/blob/master/dune/queries/08_debt_concentration.sql) | debt HHI and top-vault share per market |
+| [`00_observations_dedup.sql`](https://github.com/guilyx/loopscan/blob/master/dune/queries/00_observations_dedup.sql) | base view; save once and reference as `query_<id>` |
+| [`01_market_hourly.sql`](https://github.com/guilyx/loopscan/blob/master/dune/queries/01_market_hourly.sql) | TVL, borrows, utilization, APRs, share prices per market and hour |
+| [`02_vault_hourly.sql`](https://github.com/guilyx/loopscan/blob/master/dune/queries/02_vault_hourly.sql) | collateral, oracle price, debt and LTV per vault and hour |
+| [`03_tvl_daily.sql`](https://github.com/guilyx/loopscan/blob/master/dune/queries/03_tvl_daily.sql) | chart-ready end-of-day TVL / borrows / utilization |
+| [`04_market_overview.sql`](https://github.com/guilyx/loopscan/blob/master/dune/queries/04_market_overview.sql) | counters: latest state, all-time peak, drawdown |
+| [`05_flows_daily.sql`](https://github.com/guilyx/loopscan/blob/master/dune/queries/05_flows_daily.sql) | TVL change split into interest and net deposits |
+| [`06_realized_yield.sql`](https://github.com/guilyx/loopscan/blob/master/dune/queries/06_realized_yield.sql) | realized lender APY from share price vs quoted APR |
+| [`07_vault_risk.sql`](https://github.com/guilyx/loopscan/blob/master/dune/queries/07_vault_risk.sql) | capacity used and price drop to liquidation per vault |
+| [`08_debt_concentration.sql`](https://github.com/guilyx/loopscan/blob/master/dune/queries/08_debt_concentration.sql) | debt HHI and top-vault share per market |
 
 Each query takes a text parameter `{{namespace}}` (your `DUNE_NAMESPACE`). The
-definitions match the Postgres views in [`supabase/migrations/`](https://github.com/guilyx/loop-dune/tree/master/supabase/migrations), so Dune and the hosted
+definitions match the Postgres views in [`supabase/migrations/`](https://github.com/guilyx/loopscan/tree/master/supabase/migrations), so Dune and the hosted
 dashboard always agree.
 
 ## Joining with Dune's own tables

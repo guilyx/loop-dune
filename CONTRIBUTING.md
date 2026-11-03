@@ -51,8 +51,8 @@ scripts, and does a full backup → restore round trip.
   explaining why when it is not obvious.
 * Fill in the pull request template. Screenshots for UI changes.
 * By contributing, you agree that your work is licensed under the
-  [GPL-3.0](https://github.com/guilyx/loop-dune/blob/master/LICENSE).
+  [GPL-3.0](https://github.com/guilyx/loopscan/blob/master/LICENSE).
 
 ## Code of conduct
 
-Be kind and constructive. See the [Code of Conduct](https://github.com/guilyx/loop-dune/blob/master/CODE_OF_CONDUCT.md).
+Be kind and constructive. See the [Code of Conduct](https://github.com/guilyx/loopscan/blob/master/CODE_OF_CONDUCT.md).

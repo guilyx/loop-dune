@@ -22,14 +22,14 @@ flowchart LR
 | **Size** | 2 vCPU / 2 GB RAM / 40 GB disk is plenty (Hetzner CX22, DigitalOcean, OVH...). The full hourly history is ~700 MB in Postgres. |
 | **OS** | Ubuntu 22.04/24.04 or Debian 12 |
 | **Exposed** | 22 (SSH), 80/443 (Caddy). Postgres and the dashboard have no internet route. |
-| **Files** | [`deploy/vps/`](https://github.com/guilyx/loop-dune/tree/master/deploy/vps): `docker-compose.yml`, `Caddyfile`, `.env.example`, `stack.sh`, `bootstrap.sh` |
+| **Files** | [`deploy/vps/`](https://github.com/guilyx/loopscan/tree/master/deploy/vps): `docker-compose.yml`, `Caddyfile`, `.env.example`, `stack.sh`, `bootstrap.sh` |
 
 ## Set up (about 20 minutes)
 
 **1. Provision** (as root, on a fresh server with your SSH key installed):
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/guilyx/loop-dune/master/deploy/vps/bootstrap.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/guilyx/loopscan/master/deploy/vps/bootstrap.sh | sudo bash
 ```
 
 It installs Docker, opens only 22/80/443, enables unattended security upgrades and
